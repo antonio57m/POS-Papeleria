@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Gestión de Personal')}"></head>
+<style>
+    /* Estilos premium para la tabla de datos */
+    .table-premium {
+        background-color: var(--white);
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 15px rgba(42, 49, 50, 0.03);
+    }
+    .table-premium thead th {
+        background-color: var(--brand-mist);
+        color: var(--white);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-size: 0.75rem;
+        border: none;
+        padding: 15px 20px;
+    }
+    .table-premium tbody td {
+        vertical-align: middle;
+        padding: 15px 20px;
+        color: var(--brand-shadow);
+        border-bottom: 1px solid rgba(0,0,0,0.03);
+    }
+    .table-premium tbody tr:hover {
+        background-color: #F8FBFC;
+    }
+</style>
+<body>
+<div class="app-wrapper">
+    <div th:replace="~{fragments/sidebar :: sidebar}"></div>
+
+    <main class="main-content">
+        <div th:replace="~{fragments/header :: header}"></div>
+
+        <div class="content-body">
+
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h4 class="fw-bold mb-0" style="color: var(--brand-shadow);">Gestión de Personal</h4>
+                    <p class="text-muted small mb-0">Administración de accesos y roles del sistema</p>
+                </div>
+                <button class="btn btn-premium" onclick="abrirModalNuevo()">
+                    <i class="bi bi-person-plus me-2"></i>Nuevo Empleado
+                </button>
+            </div>
+
+            <div class="table-responsive table-premium">
+                <table class="table mb-0">
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Usuario</th>
+                        <th class="text-center">Rol</th>
+                        <th class="text-center">Estado</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                    </thead>
+                    <tbody id="tablaUsuarios">
+                    <tr><td colspan="5" class="text-center text-muted py-4">Cargando personal...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+</div>
+
+<div class="modal fade" id="modalUsuario" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 15px; border: none;">
+            <div class="modal-header" style="background-color: var(--brand-mist); color: white; border-radius: 15px 15px 0 0;">
+                <h5 class="modal-title fw-bold" id="modalTitle"><i class="bi bi-person-badge me-2"></i>Datos del Empleado</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="formUsuario">
+                    <input type="hidden" id="userId">
+
+                    <div class="mb-3">
+                        <label class="label-premium">Nombre de Usuario (Login)</label>
+                        <input type="text" class="form-control input-premium" id="username" minlength="4" maxlength="50" required placeholder="Ej. juan.perez">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="label-premium">Contraseña</label>
+                        <input type="password" class="form-control input-premium" id="password" required placeholder="Ingresa la contraseña">
+                        <small class="text-muted" id="passwordHelp">Si editas un usuario, escribir aquí cambiará su clave.</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="label-premium">Rol en el Sistema</label>
+                        <select class="form-select input-premium" id="rol" required>
+                            <option value="CAJERO">CAJERO (Mostrador y Ventas)</option>
+                            <option value="ADMIN">ADMINISTRADOR (Acceso Total)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-check form-switch mt-4" id="divEstado" style="display: none;">
+                        <input class="form-check-input" type="checkbox" id="activo">
+                        <label class="form-check-label fw-bold" for="activo">Usuario Activo</label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-premium" onclick="guardarUsuario()">Guardar Empleado</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    let modalUI;
+    let usuariosCache = [];
+
+    document.addEventListener('DOMContentLoaded', () => {
+        modalUI = new bootstrap.Modal(document.getElementById('modalUsuario'));
+        cargarUsuarios();
+    });
+
+    function cargarUsuarios() {
+        fetch('/api/usuarios')
+            .then(res => res.json())
+            .then(data => {
+                usuariosCache = data;
+                const tbody = document.getElementById('tablaUsuarios');
+                tbody.innerHTML = '';
+
+                data.forEach(u => {
+                    const badgeRol = u.rol === 'ADMIN' ? 'bg-danger' : 'bg-primary';
+                    const badgeEstado = u.activo ? '<span class="badge bg-success">Activo</span>' : '<span class="badge bg-secondary">Inactivo</span>';
+
+                    // Consistencia visual con productos
+                    const opacidad = u.activo ? '1' : '0.5';
+                    const badgeInactivo = u.activo ? '' : '<span class="badge bg-danger ms-2">Inactivo</span>';
+
+                    // Botón dinámico: Ojo abierto (desactivar) u Ojo cerrado (reactivar)
+                    const btnOjo = u.activo ?
+                        `<button class="btn btn-sm btn-light text-warning me-1" onclick="alternarEstado(${u.id})" title="Desactivar (Bloquear Acceso)"><i class="bi bi-eye-slash"></i></button>` :
+                        `<button class="btn btn-sm btn-light text-success me-1" onclick="alternarEstado(${u.id})" title="Activar (Permitir Acceso)"><i class="bi bi-eye"></i></button>`;
+
+                    tbody.innerHTML += `
+                        <tr style="opacity: ${opacidad}; transition: all 0.3s;">
+                            <td class="fw-bold" style="color: var(--brand-mist);">#${u.id}</td>
+                            <td class="fw-bold">${u.username} ${badgeInactivo}</td>
+                            <td class="text-center"><span class="badge ${badgeRol}">${u.rol}</span></td>
+                            <td class="text-center">${badgeEstado}</td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-light text-secondary me-1" onclick="abrirModalEditar(${u.id})" title="Editar">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                ${btnOjo}
+                            </td>
+                        </tr>
+                    `;
+                });
+            })
+            .catch(err => console.error('Error cargando usuarios:', err));
+    }
+
+    function alternarEstado(id) {
+        const u = usuariosCache.find(x => x.id === id);
+        if(!u) return;
+
+        const accion = u.activo ? 'desactivar (bloquear acceso)' : 'reactivar (permitir acceso)';
+
+        if(confirm(`¿Deseas ${accion} al empleado ${u.username}?`)) {
+
+            // Reutilizamos la lógica del PUT para invertir el estado
+            const payload = {
+                username: u.username,
+                passwordHash: u.passwordHash,
+                rol: u.rol,
+                activo: !u.activo // INVERTIMOS SU ESTADO ACTUAL
+            };
+
+            fetch(`/api/usuarios/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }).then(async res => {
+                if(res.ok) {
+                    cargarUsuarios();
+                } else {
+                    const err = await res.text();
+                    alert('Error al cambiar el estado del empleado: ' + err);
+                }
+            });
+        }
+    }
+
+    function abrirModalNuevo() {
+        document.getElementById('formUsuario').reset();
+        document.getElementById('userId').value = '';
+        document.getElementById('modalTitle').innerHTML = 'Nuevo Empleado';
+        document.getElementById('divEstado').style.display = 'none';
+        document.getElementById('activo').checked = true;
+        document.getElementById('password').required = true;
+        modalUI.show();
+    }
+
+    function abrirModalEditar(id) {
+        const u = usuariosCache.find(x => x.id === id);
+        if(!u) return;
+
+        document.getElementById('formUsuario').reset();
+        document.getElementById('userId').value = u.id;
+        document.getElementById('username').value = u.username;
+        document.getElementById('rol').value = u.rol;
+        document.getElementById('activo').checked = u.activo;
+
+        document.getElementById('password').value = '';
+        document.getElementById('password').required = false;
+
+        document.getElementById('modalTitle').innerHTML = 'Editar Empleado';
+        document.getElementById('divEstado').style.display = 'block';
+        modalUI.show();
+    }
+
+    function guardarUsuario() {
+        const form = document.getElementById('formUsuario');
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+
+        const id = document.getElementById('userId').value;
+        let pwdInput = document.getElementById('password').value;
+
+        if (id && pwdInput.trim() === '') {
+            const u = usuariosCache.find(x => x.id === parseInt(id));
+            pwdInput = u.passwordHash;
+        }
+
+        const payload = {
+            username: document.getElementById('username').value,
+            passwordHash: pwdInput,
+            rol: document.getElementById('rol').value,
+            activo: document.getElementById('activo').checked
+        };
+
+        const method = id ? 'PUT' : 'POST';
+        const url = id ? `/api/usuarios/${id}` : '/api/usuarios';
+
+        fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+            .then(async res => {
+                if(res.ok) {
+                    modalUI.hide();
+                    cargarUsuarios();
+                } else {
+                    const errorText = await res.text();
+                    alert('Error al guardar: ' + errorText);
+                }
+            });
+    }
+</script>
+</body>
+</html>

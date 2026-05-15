@@ -48,16 +48,7 @@ public class UsuarioService {
 
         return usuarioRepository.save(usuario);
     }
-
-    @Transactional
-    public void darDeBajaUsuario(Integer id) {
-        // Regla 3: Borrado Lógico en lugar de Borrado Físico
-        Usuario usuario = usuarioRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado con ID: " + id));
-
-        usuario.setActivo(false);
-        usuarioRepository.save(usuario); // Solo actualizamos su estado
-    }
+    
 
     public Optional<Usuario> buscarPorId(Integer id) {
         return usuarioRepository.findById(id);
@@ -81,5 +72,14 @@ public class UsuarioService {
         }
         // Si no existe, no es admin, o la contraseña es incorrecta, devolvemos vacío
         return Optional.empty();
+    }
+    @Transactional
+    public void darDeBajaUsuario(Integer id) {
+        // Regla 3: Borrado Lógico en lugar de Borrado Físico
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado con ID: " + id));
+
+        usuario.setActivo(false); // <--- AQUÍ ESTÁ LA MAGIA
+        usuarioRepository.save(usuario); // Solo actualizamos su estado
     }
 }

@@ -2,15 +2,44 @@
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head('Devoluciones')}"></head>
 <style>
+    /* Estilos premium unificados */
+    .table-premium {
+        background-color: var(--white);
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 15px rgba(42, 49, 50, 0.03);
+    }
+    .table-premium thead th {
+        background-color: var(--brand-mist);
+        color: var(--white);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-size: 0.75rem;
+        border: none;
+        padding: 15px 20px;
+    }
+    .table-premium tbody td {
+        vertical-align: middle;
+        padding: 15px 20px;
+        color: var(--brand-shadow);
+        border-bottom: 1px solid rgba(0,0,0,0.03);
+    }
+    .table-premium tbody tr:hover {
+        background-color: #F8FBFC;
+    }
     .ticket-search-box {
-        background: var(--brand-mist);
+        background: var(--white);
         border-radius: 12px;
         padding: 30px;
-        color: white;
+        box-shadow: 0 4px 15px rgba(42, 49, 50, 0.03);
+        border: 1px solid rgba(0,0,0,0.05);
     }
-    .table-premium th {
-        background-color: var(--brand-shadow);
-        color: white;
+    .label-premium {
+        font-weight: 600;
+        color: var(--brand-shadow);
+        font-size: 0.85rem;
+        margin-bottom: 0.5rem;
     }
 </style>
 <body>
@@ -23,25 +52,27 @@
         <div class="content-body">
             <div class="d-flex justify-content-between align-items-end mb-4">
                 <div>
-                    <h3 class="fw-bold mb-1" style="color: var(--brand-shadow);">Gestión de Devoluciones</h3>
-                    <p class="text-muted mb-0">Auditoría diferida (Requiere Bandeja Roja)</p>
+                    <h4 class="fw-bold mb-0" style="color: var(--brand-shadow);">Gestión de Devoluciones</h4>
+                    <p class="text-muted small mb-0">Auditoría diferida (Requiere Bandeja Roja)</p>
                 </div>
             </div>
 
             <div class="row g-4">
                 <div class="col-md-4">
-                    <div class="ticket-search-box shadow-sm">
-                        <h5 class="fw-bold mb-3"><i class="bi bi-receipt me-2"></i>Buscar Ticket</h5>
-                        <div class="input-group input-group-lg mb-3">
-                            <span class="input-group-text bg-white border-0"><i class="bi bi-search text-muted"></i></span>
-                            <input type="number" id="inputTicketId" class="form-control border-0" placeholder="Folio del ticket (Ej. 1024)">
+                    <div class="ticket-search-box">
+                        <h5 class="fw-bold mb-3" style="color: var(--brand-shadow);"><i class="bi bi-receipt me-2"></i>Buscar Ticket</h5>
+                        <div class="input-group mb-3">
+                            <span class="input-group-text bg-white border-end-0" style="color: var(--brand-mist);">
+                                <i class="bi bi-search"></i>
+                            </span>
+                            <input type="number" id="inputTicketId" class="form-control input-premium border-start-0 ps-0" placeholder="Folio del ticket (Ej. 1024)" onkeypress="manejarBusqueda(event)">
                         </div>
-                        <button class="btn btn-dark w-100 fw-bold py-2" onclick="buscarTicket()">
+                        <button class="btn btn-premium w-100 fw-bold py-2" onclick="buscarTicket()">
                             Consultar Venta
                         </button>
                     </div>
 
-                    <div id="resumenTicket" class="card premium-card p-3 mt-4 d-none">
+                    <div id="resumenTicket" class="card premium-card p-3 mt-4 d-none" style="border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 4px 15px rgba(42, 49, 50, 0.03);">
                         <h6 class="fw-bold text-muted border-bottom pb-2 mb-3">Datos del Ticket</h6>
                         <p class="mb-1 small"><strong>Estado:</strong> <span id="lblEstado" class="badge bg-success"></span></p>
                         <p class="mb-1 small"><strong>Fecha:</strong> <span id="lblFecha"></span></p>
@@ -51,10 +82,9 @@
                 </div>
 
                 <div class="col-md-8">
-                    <div class="card premium-card p-4 h-100">
-                        <h6 class="fw-bold text-muted mb-3"><i class="bi bi-list-check me-2"></i>Artículos del Ticket</h6>
-                        <div class="table-responsive table-premium border rounded">
-                            <table class="table table-hover mb-0">
+                    <div class="card premium-card p-0 h-100" style="border: none; background: transparent;">
+                        <div class="table-responsive table-premium h-100">
+                            <table class="table mb-0">
                                 <thead>
                                 <tr>
                                     <th>Artículo</th>
@@ -65,7 +95,7 @@
                                 </tr>
                                 </thead>
                                 <tbody id="tablaDetalles">
-                                <tr><td colspan="5" class="text-center text-muted py-4">Ingresa un número de ticket para ver los artículos.</td></tr>
+                                <tr><td colspan="5" class="text-center text-muted py-5">Ingresa un número de ticket para ver los artículos.</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -78,37 +108,38 @@
 
 <div class="modal fade" id="modalDevolucion" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="border-radius: 15px;">
-            <div class="modal-header bg-danger text-white" style="border-radius: 15px 15px 0 0;">
+        <div class="modal-content" style="border-radius: 15px; border: none;">
+            <div class="modal-header" style="background-color: var(--brand-mist); color: white; border-radius: 15px 15px 0 0;">
                 <h5 class="modal-title fw-bold"><i class="bi bi-arrow-counterclockwise me-2"></i>Devolver Artículo</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
-                <p class="fw-bold mb-1" id="mdlNombreItem"></p>
+                <p class="fw-bold mb-1 fs-5" id="mdlNombreItem" style="color: var(--brand-shadow);"></p>
                 <p class="small text-muted mb-4">Monto a reintegrar: <span id="mdlMonto" class="fw-bold text-danger"></span> por unidad.</p>
 
                 <input type="hidden" id="mdlIdDetalle">
 
-                <div class="mb-3">
-                    <label class="small fw-bold text-muted">Cantidad a devolver</label>
-                    <input type="number" class="form-control form-control-lg" id="mdlCantidad" min="1" value="1">
-                    <small class="text-muted">Máximo disponible: <span id="mdlMaximo"></span></small>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="label-premium">Cantidad a devolver</label>
+                        <input type="number" class="form-control input-premium" id="mdlCantidad" min="1" value="1">
+                        <small class="text-muted" style="font-size: 0.7rem;">Máximo: <span id="mdlMaximo"></span></small>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="label-premium">Motivo</label>
+                        <input type="text" class="form-control input-premium" id="mdlMotivo" placeholder="Ej. Defecto" required>
+                    </div>
                 </div>
 
-                <div class="mb-3">
-                    <label class="small fw-bold text-muted">Motivo de la devolución</label>
-                    <input type="text" class="form-control" id="mdlMotivo" placeholder="Ej. Producto defectuoso, Error de cobro" required>
-                </div>
-
-                <div class="form-check form-switch mt-4 bg-light p-3 rounded border">
-                    <input class="form-check-input ms-0 me-3" type="checkbox" id="mdlEsMerma" style="width: 40px; height: 20px;">
-                    <label class="form-check-label fw-bold mt-1" for="mdlEsMerma">¿Es Merma? (Producto dañado)</label>
-                    <div class="small text-muted mt-1 ms-5">Si se activa, el producto NO regresará al inventario, pero el dinero sí saldrá de la caja.</div>
+                <div class="form-check form-switch mt-3" style="background-color: rgba(118, 54, 38, 0.05); padding: 15px 15px 15px 50px; border-radius: 8px; border: 1px solid rgba(118, 54, 38, 0.1);">
+                    <input class="form-check-input" type="checkbox" id="mdlEsMerma" style="width: 40px; height: 20px; margin-left: -35px;">
+                    <label class="form-check-label fw-bold mt-1" for="mdlEsMerma" style="color: var(--brand-autumn);">¿Es Merma? (Producto dañado)</label>
+                    <div class="small text-muted mt-1" style="font-size: 0.75rem;">Si se activa, no regresará al inventario. El dinero sí saldrá de la caja.</div>
                 </div>
             </div>
-            <div class="modal-footer border-0 bg-light" style="border-radius: 0 0 15px 15px;">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-danger px-4 fw-bold" onclick="ejecutarDevolucion()">Procesar y Sacar Efectivo</button>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger px-4 fw-bold" onclick="ejecutarDevolucion()">Sacar Efectivo</button>
             </div>
         </div>
     </div>
@@ -123,12 +154,18 @@
     document.addEventListener('DOMContentLoaded', () => {
         modalDevUI = new bootstrap.Modal(document.getElementById('modalDevolucion'));
 
-        // Actualizar monto estimado al cambiar cantidad en el modal
         document.getElementById('mdlCantidad').addEventListener('input', function() {
             let cant = parseFloat(this.value) || 0;
             document.getElementById('mdlMonto').innerText = '$' + (cant * precioUnitarioActual).toFixed(2);
         });
     });
+
+    // Permite buscar presionando Enter en el input
+    function manejarBusqueda(event) {
+        if (event.key === 'Enter') {
+            buscarTicket();
+        }
+    }
 
     function buscarTicket() {
         const id = document.getElementById('inputTicketId').value;
@@ -162,9 +199,9 @@
 
                     tbody.innerHTML += `
                         <tr>
-                            <td class="fw-bold">${d.nombre} <br><small class="text-muted">${d.tipo}</small></td>
+                            <td class="fw-bold" style="color: var(--brand-shadow);">${d.nombre} <br><small class="text-muted fw-normal">${d.tipo}</small></td>
                             <td class="text-center">${d.cantidadOriginal}</td>
-                            <td class="text-center text-danger">${d.cantidadDevueltaHistorial}</td>
+                            <td class="text-center text-danger fw-bold">${d.cantidadDevueltaHistorial}</td>
                             <td class="text-end">$${d.precioUnitario.toFixed(2)}</td>
                             <td class="text-center">${btnHtml}</td>
                         </tr>

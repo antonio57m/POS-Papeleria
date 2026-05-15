@@ -2,6 +2,7 @@
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head('Insumos y Recetas')}"></head>
 <style>
+    /* --- ESTILOS PREMIUM HOMOLOGADOS --- */
     .table-premium {
         background-color: var(--white);
         border-radius: 12px;
@@ -9,7 +10,7 @@
         box-shadow: 0 4px 15px rgba(42, 49, 50, 0.03);
     }
     .table-premium thead th {
-        background-color: var(--brand-shadow);
+        background-color: var(--brand-mist);
         color: var(--white);
         font-weight: 600;
         text-transform: uppercase;
@@ -24,12 +25,30 @@
         color: var(--brand-shadow);
         border-bottom: 1px solid rgba(0,0,0,0.03);
     }
+    .table-premium tbody tr:hover {
+        background-color: #F8FBFC;
+    }
+    .label-premium {
+        font-weight: 600;
+        color: var(--brand-shadow);
+        font-size: 0.85rem;
+        margin-bottom: 0.5rem;
+    }
+
+    /* Estilos Premium para las Pestañas (Tabs) */
+    .nav-tabs {
+        border-bottom: 2px solid rgba(0,0,0,0.05);
+    }
     .nav-tabs .nav-link {
         color: var(--brand-mist);
-        font-weight: bold;
+        font-weight: 600;
         border: none;
         border-bottom: 3px solid transparent;
-        padding: 15px 25px;
+        padding: 12px 25px;
+        transition: all 0.3s ease;
+    }
+    .nav-tabs .nav-link:hover {
+        color: var(--brand-shadow);
     }
     .nav-tabs .nav-link.active {
         color: var(--brand-stone);
@@ -69,13 +88,16 @@
             <div class="tab-content" id="myTabContent">
 
                 <div class="tab-pane fade show active" id="insumos" role="tabpanel">
-                    <div class="card premium-card p-3 mb-4 d-flex flex-row justify-content-between">
-                        <button class="btn btn-outline-secondary" onclick="cargarInsumos()">
-                            <i class="bi bi-arrow-clockwise"></i> Refrescar
-                        </button>
-                        <button class="btn btn-premium" onclick="abrirModalInsumo()">
-                            <i class="bi bi-plus-lg me-2"></i>Nuevo Insumo
-                        </button>
+
+                    <div class="card premium-card p-3 mb-4 border-0 shadow-sm" style="border-radius: 12px;">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <button class="btn btn-outline-secondary fw-bold" onclick="cargarInsumos()">
+                                <i class="bi bi-arrow-clockwise me-2"></i> Refrescar
+                            </button>
+                            <button class="btn btn-premium" onclick="abrirModalInsumo()">
+                                <i class="bi bi-plus-lg me-2"></i>Nuevo Insumo
+                            </button>
+                        </div>
                     </div>
 
                     <div class="table-responsive table-premium">
@@ -96,28 +118,29 @@
                 </div>
 
                 <div class="tab-pane fade" id="recetas" role="tabpanel">
-                    <div class="row">
+                    <div class="row g-4">
+
                         <div class="col-md-4">
-                            <div class="card premium-card p-4 h-100">
-                                <h6 class="fw-bold mb-3 text-muted">1. Selecciona un Servicio</h6>
-                                <select class="form-select form-select-lg mb-3" id="selectServicio" onchange="cargarRecetaSeleccionada()">
+                            <div class="card premium-card p-4 h-100 border-0 shadow-sm" style="border-radius: 12px;">
+                                <h6 class="fw-bold mb-3" style="color: var(--brand-shadow);">1. Selecciona un Servicio</h6>
+                                <select class="form-select input-premium form-select-lg mb-3" id="selectServicio" onchange="cargarRecetaSeleccionada()">
                                     <option value="">-- Elige un servicio --</option>
                                 </select>
 
-                                <hr>
+                                <hr style="opacity: 0.1;">
 
-                                <h6 class="fw-bold mb-3 text-muted mt-4">2. Agregar Insumo a la Receta</h6>
+                                <h6 class="fw-bold mb-3 mt-4" style="color: var(--brand-shadow);">2. Agregar Insumo a la Receta</h6>
                                 <form id="formReceta">
                                     <div class="mb-3">
-                                        <label class="small fw-bold">Insumo a consumir</label>
-                                        <select class="form-select" id="selectInsumoParaReceta">
+                                        <label class="label-premium">Insumo a consumir</label>
+                                        <select class="form-select input-premium" id="selectInsumoParaReceta">
                                         </select>
                                     </div>
-                                    <div class="mb-3">
-                                        <label class="small fw-bold">Cantidad a descontar por cada venta</label>
+                                    <div class="mb-4">
+                                        <label class="label-premium">Cantidad a descontar por venta</label>
                                         <div class="input-group">
-                                            <input type="number" step="0.0001" class="form-control" id="inputGastoInsumo" placeholder="Ej. 0.05">
-                                            <span class="input-group-text bg-light" id="spanUnidadInsumo">...</span>
+                                            <input type="number" step="0.0001" class="form-control input-premium border-end-0" id="inputGastoInsumo" placeholder="Ej. 0.05">
+                                            <span class="input-group-text bg-white text-muted border-start-0" id="spanUnidadInsumo">...</span>
                                         </div>
                                     </div>
                                     <button type="button" class="btn btn-premium w-100" onclick="vincularInsumo()">
@@ -128,19 +151,19 @@
                         </div>
 
                         <div class="col-md-8">
-                            <div class="card premium-card p-4 h-100">
-                                <h6 class="fw-bold mb-3 text-muted">3. Materiales Consumidos por Venta</h6>
-                                <div class="table-responsive table-premium border">
+                            <div class="card premium-card p-0 h-100 border-0 bg-transparent">
+                                <h6 class="fw-bold mb-3 ps-1" style="color: var(--brand-shadow);">3. Materiales Consumidos por Venta</h6>
+                                <div class="table-responsive table-premium h-100">
                                     <table class="table mb-0">
                                         <thead>
                                         <tr>
                                             <th>Material</th>
                                             <th>Gasto por Ticket</th>
-                                            <th class="text-center">Quitar</th>
+                                            <th class="text-end">Quitar</th>
                                         </tr>
                                         </thead>
                                         <tbody id="tablaRecetaDetalle">
-                                        <tr><td colspan="3" class="text-center text-muted py-4">Selecciona un servicio primero.</td></tr>
+                                        <tr><td colspan="3" class="text-center text-muted py-5">Selecciona un servicio primero.</td></tr>
                                         </tbody>
                                     </table>
                                 </div>
@@ -156,8 +179,8 @@
 
 <div class="modal fade" id="modalInsumo" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="border-radius: 15px;">
-            <div class="modal-header bg-dark text-white" style="border-radius: 15px 15px 0 0;">
+        <div class="modal-content" style="border-radius: 15px; border: none;">
+            <div class="modal-header" style="background-color: var(--brand-mist); color: white; border-radius: 15px 15px 0 0;">
                 <h5 class="modal-title fw-bold" id="modalTituloInsumo">Nuevo Insumo</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
@@ -180,7 +203,8 @@
                     </div>
                 </form>
             </div>
-            <div class="modal-footer border-0">
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
                 <button type="button" class="btn btn-premium" onclick="guardarInsumo()">Guardar</button>
             </div>
         </div>
@@ -189,18 +213,19 @@
 
 <div class="modal fade" id="modalAjuste" tabindex="-1">
     <div class="modal-dialog modal-sm modal-dialog-centered">
-        <div class="modal-content" style="border-radius: 15px;">
+        <div class="modal-content" style="border-radius: 15px; border: none;">
             <div class="modal-body p-4 text-center">
-                <i class="bi bi-box-seam fs-1 text-primary"></i>
+                <i class="bi bi-box-seam fs-1" style="color: var(--brand-stone);"></i>
                 <h5 class="fw-bold mt-2" id="txtAjusteTitulo">Ajuste</h5>
                 <p class="small text-muted" id="txtAjusteNombre"></p>
 
                 <input type="hidden" id="ajusteId">
-                <input type="hidden" id="ajusteTipo"> <div class="mb-3 text-start">
-                <label class="label-premium">Cantidad</label>
-                <input type="number" step="0.01" class="form-control input-premium text-center fs-4" id="ajusteCantidad" min="0.01" value="1">
-            </div>
-                <button type="button" class="btn btn-dark w-100" onclick="procesarAjuste()">Confirmar</button>
+                <input type="hidden" id="ajusteTipo">
+                <div class="mb-4 text-start">
+                    <label class="label-premium">Cantidad a registrar</label>
+                    <input type="number" step="0.01" class="form-control input-premium text-center fs-4" id="ajusteCantidad" min="0.01" value="1">
+                </div>
+                <button type="button" class="btn btn-premium w-100" onclick="procesarAjuste()">Confirmar Acción</button>
             </div>
         </div>
     </div>
@@ -216,7 +241,6 @@
         modalAjusteUI = new bootstrap.Modal(document.getElementById('modalAjuste'));
         cargarInsumos();
 
-        // Listener para actualizar la etiqueta de unidad en el formulario de recetas
         document.getElementById('selectInsumoParaReceta').addEventListener('change', function(e) {
             const insumoSeleccionado = listaInsumosGlobal.find(i => i.id == e.target.value);
             document.getElementById('spanUnidadInsumo').innerText = insumoSeleccionado ? insumoSeleccionado.unidadMedida : '...';
@@ -246,19 +270,25 @@
             const badgeInactivo = esActivo ? '' : '<span class="badge bg-danger ms-2">Inactivo</span>';
 
             const btnOjo = esActivo ?
-                `<button class="btn btn-sm btn-light text-warning me-1" onclick="alternarEstadoInsumo(${i.id})" title="Desactivar"><i class="bi bi-eye-slash"></i></button>` :
-                `<button class="btn btn-sm btn-light text-success me-1" onclick="alternarEstadoInsumo(${i.id})" title="Activar"><i class="bi bi-eye"></i></button>`;
+                `<button class="btn btn-sm btn-light text-warning me-1" onclick="alternarEstadoInsumo(${i.id})" title="Desactivar (Ocultar)"><i class="bi bi-eye-slash"></i></button>` :
+                `<button class="btn btn-sm btn-light text-success me-1" onclick="alternarEstadoInsumo(${i.id})" title="Activar (Mostrar)"><i class="bi bi-eye"></i></button>`;
 
             tbody.innerHTML += `
-                <tr style="opacity: ${opacidad};">
+                <tr style="opacity: ${opacidad}; transition: all 0.3s;">
                     <td class="text-muted fw-bold">#${i.id}</td>
                     <td class="fw-bold">${i.nombre} ${badgeInactivo}</td>
                     <td>${i.unidadMedida}</td>
-                    <td class="fw-bold" style="color: var(--brand-shadow);">${i.cantidadActual.toFixed(2)}</td>
+                    <td class="fw-bold" style="color: var(--brand-stone);">${i.cantidadActual.toFixed(2)}</td>
                     <td class="text-end">
-                        <button class="btn btn-sm btn-light text-success me-1" onclick="abrirModalAjuste(${i.id}, '${i.nombre}', 'ABASTECER')" ${!esActivo ? 'disabled' : ''}><i class="bi bi-plus-circle"></i></button>
-                        <button class="btn btn-sm btn-light text-danger me-2" onclick="abrirModalAjuste(${i.id}, '${i.nombre}', 'DESCONTAR')" ${!esActivo ? 'disabled' : ''}><i class="bi bi-dash-circle"></i></button>
-                        <button class="btn btn-sm btn-light text-secondary me-1" onclick="editarInsumo(${i.id})"><i class="bi bi-pencil"></i></button>
+                        <button class="btn btn-sm btn-light text-primary me-1" onclick="abrirModalAjuste(${i.id}, '${i.nombre}', 'ABASTECER')" title="Ingresar Stock" ${!esActivo ? 'disabled' : ''}>
+                            <i class="bi bi-box-arrow-in-down"></i>
+                        </button>
+                        <button class="btn btn-sm btn-light text-danger me-1" onclick="abrirModalAjuste(${i.id}, '${i.nombre}', 'DESCONTAR')" title="Reportar Merma/Baja" ${!esActivo ? 'disabled' : ''}>
+                            <i class="bi bi-box-arrow-up"></i>
+                        </button>
+                        <button class="btn btn-sm btn-light text-secondary me-1" onclick="editarInsumo(${i.id})" title="Editar">
+                            <i class="bi bi-pencil"></i>
+                        </button>
                         ${btnOjo}
                     </td>
                 </tr>
@@ -267,7 +297,7 @@
     }
 
     function alternarEstadoInsumo(id) {
-        if(confirm('¿Cambiar estado de este insumo?')) {
+        if(confirm('¿Deseas cambiar el estado de este insumo?')) {
             fetch(`/api/insumos/${id}/estado`, { method: 'PATCH' })
                 .then(() => cargarInsumos());
         }
@@ -337,7 +367,6 @@
     // LÓGICA TAB 2: RECETAS
     // ==========================================
     function cargarDatosRecetas() {
-        // Cargar Servicios en el Select
         fetch('/api/servicios')
             .then(res => res.json())
             .then(servicios => {
@@ -348,7 +377,6 @@
                 });
             });
 
-        // Cargar Insumos en el Select
         const selectIns = document.getElementById('selectInsumoParaReceta');
         selectIns.innerHTML = '<option value="">-- Selecciona material --</option>';
         listaInsumosGlobal.filter(i => i.activo !== false).forEach(i => {
@@ -361,7 +389,7 @@
         const tbody = document.getElementById('tablaRecetaDetalle');
 
         if (!idServicio) {
-            tbody.innerHTML = `<tr><td colspan="3" class="text-center text-muted py-4">Selecciona un servicio primero.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="3" class="text-center text-muted py-5">Selecciona un servicio primero.</td></tr>`;
             return;
         }
 
@@ -370,18 +398,18 @@
             .then(receta => {
                 tbody.innerHTML = '';
                 if(receta.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="3" class="text-center text-muted py-4">Este servicio aún no tiene materiales asignados.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="3" class="text-center text-muted py-5">Este servicio aún no tiene materiales asignados.</td></tr>`;
                     return;
                 }
 
                 receta.forEach(r => {
                     tbody.innerHTML += `
                         <tr>
-                            <td class="fw-bold">${r.insumo.nombre}</td>
-                            <td>${r.cantidadDescontar} <span class="text-muted small">${r.insumo.unidadMedida}</span></td>
-                            <td class="text-center">
-                                <button class="btn btn-sm btn-link text-danger" onclick="desvincularInsumo(${r.servicio.id}, ${r.insumo.id})">
-                                    <i class="bi bi-x-circle-fill fs-5"></i>
+                            <td class="fw-bold" style="color: var(--brand-shadow);">${r.insumo.nombre}</td>
+                            <td><span class="badge bg-light text-dark border px-3 py-2 fs-6">${r.cantidadDescontar} ${r.insumo.unidadMedida}</span></td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-light text-danger" onclick="desvincularInsumo(${r.servicio.id}, ${r.insumo.id})" title="Quitar de la receta">
+                                    <i class="bi bi-trash"></i>
                                 </button>
                             </td>
                         </tr>
@@ -417,7 +445,7 @@
     }
 
     function desvincularInsumo(idServicio, idInsumo) {
-        if(confirm('¿Quitar este material de la receta?')) {
+        if(confirm('¿Estás seguro de quitar este material de la receta?')) {
             fetch(`/api/recetas/servicio/${idServicio}/insumo/${idInsumo}`, { method: 'DELETE' })
                 .then(res => {
                     if(res.ok) cargarRecetaSeleccionada();

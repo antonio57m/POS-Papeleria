@@ -92,4 +92,13 @@ public class WebController {
         model.addAttribute("activePage", "devoluciones");
         return "devoluciones";
     }
+    @GetMapping("/personal")
+    public String mostrarPersonal(Model model, Principal principal) {
+        if (principal != null) {
+            usuarioService.buscarPorUsername(principal.getName())
+                    .ifPresent(usuario -> model.addAttribute("usuarioLogueado", usuario));
+        }
+        model.addAttribute("activePage", "personal");
+        return "personal";
+    }
 }

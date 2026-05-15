@@ -2,6 +2,7 @@
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head('Catálogo de Servicios')}"></head>
 <style>
+    /* Estilos premium consistentes con Productos y Personal */
     .table-premium {
         background-color: var(--white);
         border-radius: 12px;
@@ -9,7 +10,7 @@
         box-shadow: 0 4px 15px rgba(42, 49, 50, 0.03);
     }
     .table-premium thead th {
-        background-color: var(--brand-shadow); /* Color distinto para diferenciar de productos */
+        background-color: var(--brand-mist); /* Homologado con el resto del sistema */
         color: var(--white);
         font-weight: 600;
         text-transform: uppercase;
@@ -23,6 +24,9 @@
         padding: 15px 20px;
         color: var(--brand-shadow);
         border-bottom: 1px solid rgba(0,0,0,0.03);
+    }
+    .table-premium tbody tr:hover {
+        background-color: #F8FBFC;
     }
 </style>
 <body>
@@ -44,17 +48,19 @@
                 </button>
             </div>
 
-            <div class="card premium-card p-3 mb-4">
+            <div class="card premium-card p-3 mb-4 border-0 shadow-sm" style="border-radius: 12px;">
                 <div class="row align-items-center">
                     <div class="col-md-9">
                         <div class="input-group">
-                            <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                            <span class="input-group-text bg-white border-end-0" style="color: var(--brand-mist);">
+                                <i class="bi bi-search"></i>
+                            </span>
                             <input type="text" id="inputBusqueda" class="form-control input-premium border-start-0 ps-0"
                                    placeholder="Buscar servicio por nombre..." onkeyup="manejarBusqueda()">
                         </div>
                     </div>
                     <div class="col-md-3 text-end">
-                        <button class="btn btn-outline-secondary w-100" onclick="cargarServicios()">
+                        <button class="btn btn-outline-secondary w-100 fw-bold" onclick="cargarServicios()">
                             <i class="bi bi-arrow-clockwise me-2"></i> Refrescar
                         </button>
                     </div>
@@ -72,6 +78,7 @@
                     </tr>
                     </thead>
                     <tbody id="tablaServicios">
+                    <tr><td colspan="4" class="text-center text-muted py-4">Cargando servicios...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -82,13 +89,13 @@
 <div class="modal fade" id="modalServicio" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content" style="border-radius: 15px; border: none;">
-            <div class="modal-header" style="background-color: var(--brand-shadow); color: white; border-radius: 15px 15px 0 0;">
+            <div class="modal-header" style="background-color: var(--brand-mist); color: white; border-radius: 15px 15px 0 0;">
                 <h5 class="modal-title fw-bold" id="modalTitulo">Nuevo Servicio</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
 
-                <div class="alert alert-info border-0 bg-light small mb-4">
+                <div class="alert alert-info border-0 bg-light small mb-4" style="border-radius: 8px;">
                     <i class="bi bi-info-circle-fill text-info me-2"></i>
                     <b>Tip de Cobro:</b> Si el servicio tiene un precio que varía, pon el precio en <b>0.00</b>. El cajero tecleará el monto al momento de cobrar.
                 </div>
@@ -173,7 +180,7 @@
 
             tbody.innerHTML += `
                     <tr style="opacity: ${opacidad}; transition: all 0.3s;">
-                        <td class="text-muted fw-bold">#${s.id}</td>
+                        <td class="fw-bold" style="color: var(--brand-mist);">#${s.id}</td>
                         <td class="fw-bold">${s.nombre} ${badgeInactivo}</td>
                         <td class="fw-bold" style="color: var(--brand-stone);">${precioDisplay}</td>
                         <td class="text-end">
@@ -181,7 +188,7 @@
                                 <i class="bi bi-pencil"></i>
                             </button>
                             ${btnOjo}
-                            <button class="btn btn-sm btn-light text-danger" onclick="eliminarServicio(${s.id})" title="Eliminar">
+                            <button class="btn btn-sm btn-light text-danger" onclick="eliminarServicio(${s.id})" title="Eliminar Permanente">
                                 <i class="bi bi-trash"></i>
                             </button>
                         </td>
