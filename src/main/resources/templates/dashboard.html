@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Dashboard')}"></head>
+
+<body>
+<div class="app-wrapper">
+
+    <div th:replace="~{fragments/sidebar :: sidebar}"></div>
+
+    <main class="main-content">
+
+        <div th:replace="~{fragments/header :: header}"></div>
+
+        <div class="content-body">
+
+            <div class="d-flex justify-content-between align-items-end mb-4">
+                <div>
+                    <h3 class="fw-bold mb-1" style="color: var(--brand-shadow);">
+                        Hola, <span th:text="${usuarioLogueado.username}">Usuario</span> 👋
+                    </h3>
+                    <p class="text-muted mb-0">Resumen operativo de tu sucursal</p>
+                </div>
+                <div class="text-end text-muted small fw-bold" id="reloj-dashboard">
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-md-6 col-lg-3">
+                    <div class="card premium-card p-4 h-100 border-top border-4" style="border-color: var(--brand-stone) !important;">
+                        <h6 class="text-uppercase fw-bold text-muted mb-3" style="letter-spacing: 0.05em; font-size: 0.8rem;">
+                            <i class="bi bi-person-badge me-2"></i>Mi Turno Actual
+                        </h6>
+
+                        <div id="caja-status-container" class="text-center py-3 my-auto">
+                            <div class="spinner-border text-secondary" role="status">
+                                <span class="visually-hidden">Cargando...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <th:block th:if="${usuarioLogueado.rol.name() == 'ADMIN'}">
+
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card premium-card p-4 h-100 border-top border-4" style="border-color: var(--brand-autumn) !important;">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="text-uppercase fw-bold text-muted mb-0" style="letter-spacing: 0.05em; font-size: 0.8rem;">
+                                    <i class="bi bi-exclamation-triangle me-2 text-warning"></i>Stock Crítico
+                                </h6>
+                                <a th:href="@{/catalogo/productos}" class="btn btn-sm btn-light py-0 px-2" title="Ir al inventario"><i class="bi bi-box-arrow-up-right"></i></a>
+                            </div>
+
+                            <div id="alertas-stock-container" class="overflow-auto pe-2" style="max-height: 150px;">
+                                <div class="text-center py-4 text-muted small">
+                                    <div class="spinner-border spinner-border-sm" role="status"></div> Buscando alertas...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card premium-card p-4 h-100 border-top border-4" style="border-color: #17a2b8 !important;">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="text-uppercase fw-bold text-muted mb-0" style="letter-spacing: 0.05em; font-size: 0.8rem;">
+                                    <i class="bi bi-droplet-half me-2 text-info"></i>Materiales
+                                </h6>
+                                <a th:href="@{/catalogo/insumos}" class="btn btn-sm btn-light py-0 px-2" title="Ir al almacén"><i class="bi bi-box-arrow-up-right"></i></a>
+                            </div>
+
+                            <div id="alertas-insumos-container" class="overflow-auto pe-2" style="max-height: 150px;">
+                                <div class="text-center py-4 text-muted small">
+                                    <div class="spinner-border spinner-border-sm" role="status"></div> Buscando alertas...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card premium-card p-4 h-100 border-top border-4" style="border-color: var(--brand-mist) !important;">
+                            <h6 class="text-uppercase fw-bold text-muted mb-3" style="letter-spacing: 0.05em; font-size: 0.8rem;">
+                                <i class="bi bi-shield-check me-2"></i>Alertas de Auditoría
+                            </h6>
+
+                            <div id="alertas-caja-container" class="overflow-auto pe-2" style="max-height: 150px;">
+                                <div class="text-center py-4 text-muted small">
+                                    <div class="spinner-border spinner-border-sm" role="status"></div> Revisando cortes...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </th:block>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script th:inline="javascript">
+    const userId = /*[[${usuarioLogueado.id}]]*/ 0;
+    const esAdmin = /*[[${usuarioLogueado.rol.name() == 'ADMIN'}]]*/ false;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        iniciarReloj();
+        verificarEstadoCaja();
+
+        if(esAdmin) {
+            cargarAlertasStock();
+            cargarAlertasInsumos(); // <--- Llamada añadida
+            cargarAlertasCaja();
+        }
+    });
+
+    // 1. Reloj en tiempo real para darle vida al dashboard
+    function iniciarReloj() {
+        const reloj = document.getElementById('reloj-dashboard');
+        const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+
+        function actualizar() {
+            reloj.innerText = new Date().toLocaleDateString('es-MX', opciones).toUpperCase();
+        }
+        actualizar();
+        setInterval(actualizar, 60000); // Actualiza cada minuto
+    }
+
+    // 2. Estado del Turno (Para todos)
+    function verificarEstadoCaja() {
+        const container = document.getElementById('caja-status-container');
+        fetch(`/api/cortes-caja/activa/usuario/${userId}`)
+            .then(response => {
+                if (response.ok) {
+                    container.innerHTML = `
+                            <i class="bi bi-unlock-fill fs-1" style="color: var(--brand-stone);"></i>
+                            <h4 class="fw-bold mt-2 mb-0 text-success">Turno Abierto</h4>
+                            <p class="text-muted small mt-1">Caja lista para procesar cobros.</p>
+                            <a href="/punto-venta" class="btn btn-premium btn-sm mt-3 px-4">Ir a Terminal POS</a>
+                        `;
+                } else if (response.status === 404) {
+                    container.innerHTML = `
+                            <i class="bi bi-lock-fill fs-1 text-danger"></i>
+                            <h4 class="fw-bold mt-2 mb-0">Caja Cerrada</h4>
+                            <p class="text-muted small mt-1">Requiere apertura por seguridad.</p>
+                            <a href="/corte-caja" class="btn btn-outline-danger btn-sm mt-3 px-4">Ir a Abrir Turno</a>
+                        `;
+                }
+            })
+            .catch(() => container.innerHTML = `<p class="text-danger small">Error de conexión al servidor.</p>`);
+    }
+
+    // 3. Alertas de Stock Crítico (Solo Admin)
+    function cargarAlertasStock() {
+        const container = document.getElementById('alertas-stock-container');
+        fetch('/api/productos/alertas-stock')
+            .then(res => res.json())
+            .then(productos => {
+                if(productos.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center py-3">
+                            <i class="bi bi-check-circle-fill text-success fs-3"></i>
+                            <p class="small text-muted mt-2 mb-0 fw-bold">Inventario Sano</p>
+                            <p class="small text-muted" style="font-size: 0.7rem;">No hay productos por debajo del límite.</p>
+                        </div>`;
+                    return;
+                }
+
+                let html = '<ul class="list-group list-group-flush">';
+                productos.forEach(p => {
+                    html += `
+                        <li class="list-group-item px-0 py-2 border-0 border-bottom d-flex justify-content-between align-items-start bg-transparent">
+                            <div class="ms-2 me-auto text-truncate" style="max-width: 70%;">
+                                <div class="fw-bold small" style="color: var(--brand-shadow);">${p.nombre}</div>
+                            </div>
+                            <span class="badge bg-danger rounded-pill">${p.stock}</span>
+                        </li>`;
+                });
+                html += '</ul>';
+                container.innerHTML = html;
+            });
+    }
+
+    // NUEVO: 4. Alertas de Insumos (Materiales Críticos)
+    function cargarAlertasInsumos() {
+        const container = document.getElementById('alertas-insumos-container');
+        // El umbral se establece en 20 unidades. Cambia el 20 en la URL si necesitas otro límite.
+        fetch('/api/insumos/alertas?umbral=20')
+            .then(res => res.json())
+            .then(insumos => {
+                if(insumos.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center py-3">
+                            <i class="bi bi-check-circle-fill text-success fs-3"></i>
+                            <p class="small text-muted mt-2 mb-0 fw-bold">Almacén Sano</p>
+                            <p class="small text-muted" style="font-size: 0.7rem;">Insumos con buen stock.</p>
+                        </div>`;
+                    return;
+                }
+
+                let html = '<ul class="list-group list-group-flush">';
+                insumos.forEach(i => {
+                    html += `
+                        <li class="list-group-item px-0 py-2 border-0 border-bottom d-flex justify-content-between align-items-start bg-transparent">
+                            <div class="ms-2 me-auto text-truncate" style="max-width: 70%;">
+                                <div class="fw-bold small" style="color: var(--brand-shadow);">${i.nombre}</div>
+                            </div>
+                            <span class="badge bg-danger rounded-pill" title="Unidad: ${i.unidadMedida}">${i.cantidadActual.toFixed(1)}</span>
+                        </li>`;
+                });
+                html += '</ul>';
+                container.innerHTML = html;
+            });
+    }
+
+    // 5. Auditoría de Caja (Solo Admin)
+    function cargarAlertasCaja() {
+        const container = document.getElementById('alertas-caja-container');
+        fetch('/api/cortes-caja/discrepancias')
+            .then(res => res.json())
+            .then(cortes => {
+                if(cortes.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center py-3">
+                            <i class="bi bi-check-circle-fill text-success fs-3"></i>
+                            <p class="small text-muted mt-2 mb-0 fw-bold">Auditoría Limpia</p>
+                            <p class="small text-muted" style="font-size: 0.7rem;">No hay descuadres de caja registrados.</p>
+                        </div>`;
+                    return;
+                }
+
+                let html = '<ul class="list-group list-group-flush">';
+                cortes.forEach(c => {
+                    const esFaltante = c.diferencia < 0;
+                    const color = esFaltante ? 'text-danger' : 'text-warning';
+                    const icon = esFaltante ? 'bi-arrow-down-right-circle-fill' : 'bi-arrow-up-right-circle-fill';
+                    const cajero = c.usuario ? c.usuario.username : 'Desconocido';
+
+                    html += `
+                        <li class="list-group-item px-0 py-2 border-0 border-bottom d-flex justify-content-between align-items-center bg-transparent">
+                            <div>
+                                <div class="fw-bold small" style="color: var(--brand-shadow);">Cajero: ${cajero}</div>
+                                <div class="small text-muted" style="font-size: 0.7rem;">Ticket #${c.id}</div>
+                            </div>
+                            <div class="fw-bold ${color} small"><i class="bi ${icon} me-1"></i>$${c.diferencia.toFixed(2)}</div>
+                        </li>`;
+                });
+                html += '</ul>';
+                container.innerHTML = html;
+            });
+    }
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

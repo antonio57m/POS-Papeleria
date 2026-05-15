@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Devoluciones')}"></head>
+<style>
+    .ticket-search-box {
+        background: var(--brand-mist);
+        border-radius: 12px;
+        padding: 30px;
+        color: white;
+    }
+    .table-premium th {
+        background-color: var(--brand-shadow);
+        color: white;
+    }
+</style>
+<body>
+<div class="app-wrapper">
+    <div th:replace="~{fragments/sidebar :: sidebar}"></div>
+
+    <main class="main-content">
+        <div th:replace="~{fragments/header :: header}"></div>
+
+        <div class="content-body">
+            <div class="d-flex justify-content-between align-items-end mb-4">
+                <div>
+                    <h3 class="fw-bold mb-1" style="color: var(--brand-shadow);">Gestión de Devoluciones</h3>
+                    <p class="text-muted mb-0">Auditoría diferida (Requiere Bandeja Roja)</p>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="ticket-search-box shadow-sm">
+                        <h5 class="fw-bold mb-3"><i class="bi bi-receipt me-2"></i>Buscar Ticket</h5>
+                        <div class="input-group input-group-lg mb-3">
+                            <span class="input-group-text bg-white border-0"><i class="bi bi-search text-muted"></i></span>
+                            <input type="number" id="inputTicketId" class="form-control border-0" placeholder="Folio del ticket (Ej. 1024)">
+                        </div>
+                        <button class="btn btn-dark w-100 fw-bold py-2" onclick="buscarTicket()">
+                            Consultar Venta
+                        </button>
+                    </div>
+
+                    <div id="resumenTicket" class="card premium-card p-3 mt-4 d-none">
+                        <h6 class="fw-bold text-muted border-bottom pb-2 mb-3">Datos del Ticket</h6>
+                        <p class="mb-1 small"><strong>Estado:</strong> <span id="lblEstado" class="badge bg-success"></span></p>
+                        <p class="mb-1 small"><strong>Fecha:</strong> <span id="lblFecha"></span></p>
+                        <p class="mb-1 small"><strong>Cajero Orig:</strong> <span id="lblCajero"></span></p>
+                        <p class="mb-0 small"><strong>Total Cobrado:</strong> <span id="lblTotal" class="fw-bold text-success"></span></p>
+                    </div>
+                </div>
+
+                <div class="col-md-8">
+                    <div class="card premium-card p-4 h-100">
+                        <h6 class="fw-bold text-muted mb-3"><i class="bi bi-list-check me-2"></i>Artículos del Ticket</h6>
+                        <div class="table-responsive table-premium border rounded">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                <tr>
+                                    <th>Artículo</th>
+                                    <th class="text-center">Comprados</th>
+                                    <th class="text-center">Ya Devueltos</th>
+                                    <th class="text-end">P. Unitario</th>
+                                    <th class="text-center">Acción</th>
+                                </tr>
+                                </thead>
+                                <tbody id="tablaDetalles">
+                                <tr><td colspan="5" class="text-center text-muted py-4">Ingresa un número de ticket para ver los artículos.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<div class="modal fade" id="modalDevolucion" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 15px;">
+            <div class="modal-header bg-danger text-white" style="border-radius: 15px 15px 0 0;">
+                <h5 class="modal-title fw-bold"><i class="bi bi-arrow-counterclockwise me-2"></i>Devolver Artículo</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="fw-bold mb-1" id="mdlNombreItem"></p>
+                <p class="small text-muted mb-4">Monto a reintegrar: <span id="mdlMonto" class="fw-bold text-danger"></span> por unidad.</p>
+
+                <input type="hidden" id="mdlIdDetalle">
+
+                <div class="mb-3">
+                    <label class="small fw-bold text-muted">Cantidad a devolver</label>
+                    <input type="number" class="form-control form-control-lg" id="mdlCantidad" min="1" value="1">
+                    <small class="text-muted">Máximo disponible: <span id="mdlMaximo"></span></small>
+                </div>
+
+                <div class="mb-3">
+                    <label class="small fw-bold text-muted">Motivo de la devolución</label>
+                    <input type="text" class="form-control" id="mdlMotivo" placeholder="Ej. Producto defectuoso, Error de cobro" required>
+                </div>
+
+                <div class="form-check form-switch mt-4 bg-light p-3 rounded border">
+                    <input class="form-check-input ms-0 me-3" type="checkbox" id="mdlEsMerma" style="width: 40px; height: 20px;">
+                    <label class="form-check-label fw-bold mt-1" for="mdlEsMerma">¿Es Merma? (Producto dañado)</label>
+                    <div class="small text-muted mt-1 ms-5">Si se activa, el producto NO regresará al inventario, pero el dinero sí saldrá de la caja.</div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light" style="border-radius: 0 0 15px 15px;">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger px-4 fw-bold" onclick="ejecutarDevolucion()">Procesar y Sacar Efectivo</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script th:inline="javascript">
+    const cajeroId = /*[[${usuarioLogueado.id}]]*/ 0;
+    let modalDevUI;
+    let precioUnitarioActual = 0;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        modalDevUI = new bootstrap.Modal(document.getElementById('modalDevolucion'));
+
+        // Actualizar monto estimado al cambiar cantidad en el modal
+        document.getElementById('mdlCantidad').addEventListener('input', function() {
+            let cant = parseFloat(this.value) || 0;
+            document.getElementById('mdlMonto').innerText = '$' + (cant * precioUnitarioActual).toFixed(2);
+        });
+    });
+
+    function buscarTicket() {
+        const id = document.getElementById('inputTicketId').value;
+        if (!id) return;
+
+        fetch(`/api/ventas/${id}`)
+            .then(res => {
+                if(!res.ok) throw new Error('Ticket no encontrado');
+                return res.json();
+            })
+            .then(data => {
+                document.getElementById('resumenTicket').classList.remove('d-none');
+                document.getElementById('lblEstado').innerText = data.estado.replace('_', ' ');
+                document.getElementById('lblEstado').className = data.estado === 'COMPLETADA' ? 'badge bg-success' : 'badge bg-warning text-dark';
+                document.getElementById('lblFecha').innerText = new Date(data.fecha).toLocaleString();
+                document.getElementById('lblCajero').innerText = data.cajero;
+                document.getElementById('lblTotal').innerText = `$${data.total.toFixed(2)}`;
+
+                const tbody = document.getElementById('tablaDetalles');
+                tbody.innerHTML = '';
+
+                data.detalles.forEach(d => {
+                    const cantDisponible = d.cantidadOriginal - d.cantidadDevueltaHistorial;
+                    let btnHtml = '';
+
+                    if (cantDisponible > 0) {
+                        btnHtml = `<button class="btn btn-sm btn-outline-danger fw-bold" onclick="abrirModal(${d.idDetalle}, '${d.nombre}', ${cantDisponible}, ${d.precioUnitario})">Devolver</button>`;
+                    } else {
+                        btnHtml = `<span class="badge bg-secondary">Devuelto Total</span>`;
+                    }
+
+                    tbody.innerHTML += `
+                        <tr>
+                            <td class="fw-bold">${d.nombre} <br><small class="text-muted">${d.tipo}</small></td>
+                            <td class="text-center">${d.cantidadOriginal}</td>
+                            <td class="text-center text-danger">${d.cantidadDevueltaHistorial}</td>
+                            <td class="text-end">$${d.precioUnitario.toFixed(2)}</td>
+                            <td class="text-center">${btnHtml}</td>
+                        </tr>
+                    `;
+                });
+            })
+            .catch(err => alert(err.message));
+    }
+
+    function abrirModal(idDetalle, nombre, cantMax, precio) {
+        document.getElementById('mdlIdDetalle').value = idDetalle;
+        document.getElementById('mdlNombreItem').innerText = nombre;
+        document.getElementById('mdlMaximo').innerText = cantMax;
+        document.getElementById('mdlCantidad').max = cantMax;
+        document.getElementById('mdlCantidad').value = 1;
+        document.getElementById('mdlMotivo').value = '';
+        document.getElementById('mdlEsMerma').checked = false;
+
+        precioUnitarioActual = precio;
+        document.getElementById('mdlMonto').innerText = '$' + precio.toFixed(2);
+
+        modalDevUI.show();
+    }
+
+    function ejecutarDevolucion() {
+        const payload = {
+            idDetalle: document.getElementById('mdlIdDetalle').value,
+            idCajero: cajeroId,
+            cantidadADevolver: document.getElementById('mdlCantidad').value,
+            motivo: document.getElementById('mdlMotivo').value,
+            esMerma: document.getElementById('mdlEsMerma').checked
+        };
+
+        if(!payload.motivo) {
+            alert('Debes ingresar un motivo para la devolución.');
+            return;
+        }
+
+        fetch('/api/devoluciones', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+            .then(res => res.json().then(data => ({ status: res.status, body: data })))
+            .then(res => {
+                if(res.status === 201) {
+                    alert(`${res.body.mensaje}\n\nMonto a entregar al cliente: $${res.body.montoReintegrado.toFixed(2)}\n\n⚠️ ${res.body.alerta}`);
+                    modalDevUI.hide();
+                    buscarTicket(); // Refrescar la tabla
+                } else {
+                    alert(`Error: ${res.body.error}`);
+                }
+            });
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,371 @@
+/* Variables de Marca - Paleta La Colonial */
+:root {
+    --brand-mist: #90AFC5;
+    --brand-stone: #336B87;
+    --brand-shadow: #2A3132;
+    --brand-autumn: #763626;
+
+    --bg-light: #F8F9FA;
+    --white: #FFFFFF;
+    --text-main: var(--brand-shadow);
+    --text-muted: #6c757d;
+
+    --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: var(--bg-light);
+    color: var(--text-main);
+    letter-spacing: -0.01em;
+}
+
+/* Elevación premium: sombra más suave y difusa */
+.premium-card {
+    background: var(--white);
+    border: 1px solid rgba(42, 49, 50, 0.08); /* Borde sutil color shadow */
+    border-radius: 16px;
+    box-shadow: 0 12px 35px rgba(42, 49, 50, 0.05);
+}
+
+/* Botón principal usando el color Stone */
+.btn-premium {
+    background-color: var(--brand-stone);
+    color: var(--white);
+    border: none;
+    border-radius: 8px; /* Bordes menos redondeados dan un toque más serio/corporativo */
+    padding: 12px 24px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    transition: var(--transition);
+}
+
+.btn-premium:hover, .btn-premium:focus {
+    background-color: #275268; /* Stone ligeramente oscurecido */
+    transform: translateY(-1px);
+    box-shadow: 0 6px 15px rgba(51, 107, 135, 0.25);
+    color: var(--white);
+}
+
+/* Inputs minimalistas */
+.input-premium {
+    border-radius: 8px;
+    border: 1px solid #DEE2E6;
+    padding: 12px 16px;
+    color: var(--brand-shadow);
+    background-color: #FAFAFA;
+    transition: var(--transition);
+}
+
+.input-premium:focus {
+    border-color: var(--brand-mist);
+    background-color: var(--white);
+    box-shadow: 0 0 0 4px rgba(144, 175, 197, 0.2);
+    outline: none;
+}
+
+/* Utilidad para etiquetas */
+.label-premium {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--brand-shadow);
+    opacity: 0.8;
+}
+
+/* ==========================================================================
+   Layout Base (Dashboard, Sidebar, Header)
+   ========================================================================== */
+
+.app-wrapper {
+    display: flex;
+    min-height: 100vh;
+    background-color: var(--bg-light);
+}
+
+/* Sidebar Dark Premium */
+.sidebar {
+    width: 260px;
+    background-color: var(--brand-shadow);
+    color: var(--white);
+    display: flex;
+    flex-direction: column;
+    transition: var(--transition);
+    box-shadow: 4px 0 20px rgba(42, 49, 50, 0.1);
+    z-index: 10;
+}
+
+.sidebar-header {
+    padding: 20px;
+    text-align: center;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.sidebar-logo {
+    max-width: 180px;
+    filter: brightness(0) invert(1); /* Convierte el logo a blanco si es oscuro */
+}
+
+.sidebar-menu {
+    flex: 1;
+    padding: 15px 0;
+    overflow-y: auto;
+}
+
+.menu-item {
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    color: var(--brand-mist);
+    text-decoration: none;
+    font-weight: 500;
+    transition: var(--transition);
+    border-left: 4px solid transparent;
+}
+
+.menu-item i {
+    font-size: 1.2rem;
+    margin-right: 15px;
+}
+
+.menu-item:hover {
+    background-color: rgba(144, 175, 197, 0.1);
+    color: var(--white);
+}
+
+.menu-item.active {
+    background-color: rgba(51, 107, 135, 0.2);
+    color: var(--white);
+    border-left-color: var(--brand-stone);
+}
+
+/* Contenido Principal */
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.top-header {
+    height: 70px;
+    background-color: var(--white);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 30px;
+    border-bottom: 1px solid rgba(42, 49, 50, 0.05);
+}
+
+.content-body {
+    padding: 30px;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.badge-rol {
+    background-color: var(--brand-mist);
+    color: var(--brand-shadow);
+    font-size: 0.7rem;
+    padding: 4px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.05em;
+    font-weight: bold;
+}
+
+/* ==========================================================================
+   Terminal de Punto de Venta (POS)
+   ========================================================================== */
+
+.pos-container {
+    height: calc(100vh - 130px);
+    overflow: hidden;
+}
+
+.cart-area {
+    background-color: var(--white);
+    border-radius: 12px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 15px rgba(42, 49, 50, 0.03);
+}
+
+.cart-table-wrapper {
+    flex-grow: 1;
+    overflow-y: auto;
+}
+
+/* Tabla del Carrito */
+.table-cart thead th {
+    background-color: #F8FBFC;
+    color: var(--brand-shadow);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    border-bottom: 2px solid #EAEAEA;
+}
+
+.table-cart td {
+    vertical-align: middle;
+    font-size: 0.95rem;
+    padding: 12px;
+}
+
+.item-qty-input {
+    width: 60px;
+    text-align: center;
+    border: 1px solid #DEE2E6;
+    border-radius: 6px;
+    padding: 4px;
+}
+
+/* Panel de Cobro (Derecho) */
+.checkout-panel {
+    background-color: var(--brand-shadow);
+    color: var(--white);
+    border-radius: 12px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 24px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+.total-display {
+    background-color: rgba(255,255,255,0.05);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: right;
+    margin-bottom: 20px;
+}
+
+.total-amount {
+    font-size: 3rem;
+    font-weight: 800;
+    color: var(--brand-stone);
+    line-height: 1;
+}
+
+/* Botones Rápidos de Servicios */
+.service-btn {
+    background-color: #F8FBFC;
+    border: 1px solid #EAEAEA;
+    color: var(--brand-shadow);
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-align: left;
+    transition: var(--transition);
+}
+
+.service-btn:hover {
+    background-color: var(--brand-mist);
+    color: var(--white);
+    border-color: var(--brand-mist);
+}
+
+/* Modal de Pago */
+.payment-method-btn {
+    border: 2px solid #EAEAEA;
+    background-color: transparent;
+    border-radius: 12px;
+    padding: 15px;
+    transition: var(--transition);
+    color: var(--brand-shadow);
+}
+
+.payment-method-btn:hover, .payment-method-btn.active {
+    border-color: var(--brand-stone);
+    background-color: rgba(51, 107, 135, 0.05);
+    color: var(--brand-stone);
+}
+
+/* ==========================================================================
+   Autocompletado de Búsqueda (POS)
+   ========================================================================== */
+
+.search-container {
+    position: relative;
+    width: 100%;
+}
+
+.autocomplete-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--white);
+    border: 1px solid rgba(42, 49, 50, 0.1);
+    border-radius: 0 0 12px 12px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+    max-height: 350px;
+    overflow-y: auto;
+    z-index: 1050;
+    display: none;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.autocomplete-item {
+    padding: 12px 20px;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(0,0,0,0.03);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: var(--transition);
+}
+
+.autocomplete-item:last-child {
+    border-bottom: none;
+}
+
+.autocomplete-item:hover {
+    background-color: #F8FBFC;
+    padding-left: 25px; /* Pequeña animación de desplazamiento */
+}
+
+.item-title {
+    font-weight: 600;
+    color: var(--brand-shadow);
+}
+
+.item-subtitle {
+    font-size: 0.75rem;
+    color: var(--brand-mist);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.item-price {
+    font-weight: 800;
+    color: var(--brand-stone);
+}
+
+/* Botones Rápidos en Panel Oscuro */
+.service-btn {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--white);
+    border-radius: 8px;
+    padding: 12px 10px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-align: center;
+    transition: var(--transition);
+    width: 100%;
+}
+
+.service-btn:hover {
+    background-color: var(--brand-mist);
+    border-color: var(--brand-mist);
+    color: var(--white);
+}

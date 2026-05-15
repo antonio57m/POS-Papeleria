@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<body>
+<aside th:fragment="sidebar" class="sidebar">
+    <div class="sidebar-header">
+        <img th:src="@{/img/logo.png}" alt="La Colonial" class="sidebar-logo">
+    </div>
+
+    <div class="sidebar-menu">
+        <div class="px-4 py-2 small text-uppercase fw-bold text-white-50" style="letter-spacing: 0.1em; font-size: 0.7rem;">Principal</div>
+
+        <a th:href="@{/dashboard}" class="menu-item" th:classappend="${activePage == 'dashboard' ? 'active' : ''}">
+            <i class="bi bi-grid-1x2"></i> Dashboard
+        </a>
+
+        <a th:href="@{/punto-venta}" class="menu-item" th:classappend="${activePage == 'punto-venta' ? 'active' : ''}">
+            <i class="bi bi-cart2"></i> Punto de Venta
+        </a>
+
+        <a th:href="@{/devoluciones}" class="menu-item" th:classappend="${activePage == 'devoluciones' ? 'active' : ''}">
+            <i class="bi bi-arrow-counterclockwise"></i> Devoluciones
+        </a>
+
+        <th:block th:if="${usuarioLogueado.rol.name() == 'ADMIN'}">
+            <div class="px-4 py-2 mt-3 small text-uppercase fw-bold text-white-50" style="letter-spacing: 0.1em; font-size: 0.7rem;">Administración</div>
+
+            <a th:href="@{/catalogo/productos}" class="menu-item" th:classappend="${activePage == 'catalogo' ? 'active' : ''}">
+                <i class="bi bi-box-seam"></i> Inventario Físico
+            </a>
+
+            <a th:href="@{/catalogo/servicios}" class="menu-item" th:classappend="${activePage == 'catalogo-servicios' ? 'active' : ''}">
+                <i class="bi bi-layers"></i> Servicios
+            </a>
+
+            <a th:href="@{/catalogo/insumos}" class="menu-item" th:classappend="${activePage == 'catalogo-insumos' ? 'active' : ''}">
+                <i class="bi bi-droplet-half"></i> Insumos y Recetas
+            </a>
+
+            <a href="#" class="menu-item">
+                <i class="bi bi-people"></i> Personal
+            </a>
+            <a href="#" class="menu-item">
+                <i class="bi bi-graph-up-arrow"></i> Reportes Financieros
+            </a>
+        </th:block>
+
+        <div class="px-4 py-2 mt-3 small text-uppercase fw-bold text-white-50" style="letter-spacing: 0.1em; font-size: 0.7rem;">Finanzas</div>
+
+        <a th:href="@{/corte-caja}" class="menu-item" th:classappend="${activePage == 'corte-caja' ? 'active' : ''}">
+            <i class="bi bi-safe"></i> Corte de Caja
+        </a>
+    </div>
+</aside>
+</body>
+</html>

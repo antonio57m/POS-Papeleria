@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Terminal POS')}"></head>
+<style>
+    /* Estilos para la Opción 1: Panel de Servicios Rápidos */
+    .quick-services {
+        overflow-y: auto;
+        padding-right: 5px;
+    }
+
+    /* Scrollbar sutil para los servicios rápidos si son muchos */
+    .quick-services::-webkit-scrollbar {
+        width: 4px;
+    }
+    .quick-services::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 4px;
+    }
+
+    .service-btn {
+        background-color: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: var(--white);
+        border-radius: 8px;
+        padding: 12px 10px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        text-align: center;
+        transition: all 0.2s ease-in-out;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .service-btn:hover {
+        background-color: var(--brand-mist);
+        border-color: var(--brand-mist);
+        color: var(--white);
+        transform: translateY(-2px);
+    }
+</style>
+<body>
+<div class="app-wrapper">
+    <div th:replace="~{fragments/sidebar :: sidebar}"></div>
+
+    <main class="main-content">
+        <div th:replace="~{fragments/header :: header}"></div>
+
+        <div class="content-body" style="padding-top: 15px;">
+            <div class="row h-100 pos-container">
+
+                <div class="col-lg-8 h-100 d-flex flex-column">
+
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <div class="search-container">
+                                <div class="input-group input-group-lg shadow-sm" style="border-radius: 12px;">
+                                    <span class="input-group-text bg-white border-end-0 text-primary" style="border-radius: 12px 0 0 12px;">
+                                        <i class="bi bi-search"></i>
+                                    </span>
+                                    <input type="text" id="posScanner" class="form-control border-start-0 ps-0 fw-bold"
+                                           placeholder="Escanea el código de barras o busca productos/servicios..." autocomplete="off" style="border-radius: 0 12px 12px 0;">
+                                </div>
+                                <ul id="resultadosBusqueda" class="autocomplete-results">
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="cart-area mt-2">
+                        <div class="cart-table-wrapper">
+                            <table class="table table-hover table-cart mb-0" id="tablaCarritoUI">
+                                <thead>
+                                <tr>
+                                    <th width="5%">#</th>
+                                    <th width="45%">Descripción</th>
+                                    <th width="15%" class="text-center">Cant.</th>
+                                    <th width="15%" class="text-end">Precio</th>
+                                    <th width="15%" class="text-end">Total</th>
+                                    <th width="5%"></th>
+                                </tr>
+                                </thead>
+                                <tbody id="cuerpoCarrito">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4 h-100">
+                    <div class="checkout-panel d-flex flex-column">
+                        <h5 class="text-uppercase fw-bold text-white-50 mb-4" style="letter-spacing: 0.1em;">Resumen de Venta</h5>
+
+                        <div class="d-flex justify-content-between mb-2 text-white-50">
+                            <span>Artículos:</span>
+                            <span id="resumenArticulos" class="fw-bold text-white">0</span>
+                        </div>
+
+                        <div class="quick-services mt-4 mb-auto">
+                            <h6 class="text-uppercase fw-bold text-white-50 mb-3" style="font-size: 0.7rem; letter-spacing: 0.1em;">
+                                Servicios Rápidos
+                            </h6>
+                            <div class="row g-2" id="panelServiciosRapidos">
+                            </div>
+                        </div>
+
+                        <hr class="border-secondary my-3 w-100">
+
+                        <div class="total-display mb-4 w-100">
+                            <div class="small text-uppercase text-white-50 fw-bold mb-1">Total a Cobrar</div>
+                            <div class="total-amount" id="resumenTotal">$0.00</div>
+                        </div>
+
+                        <button class="btn btn-primary btn-lg w-100 py-3 fw-bold mb-3 fs-5" id="btnCobrar" onclick="abrirModalPago()" disabled style="background-color: var(--brand-stone); border-color: var(--brand-stone);">
+                            <i class="bi bi-wallet2 me-2"></i> COBRAR
+                        </button>
+
+                        <button class="btn btn-outline-light w-100" onclick="limpiarCarrito()">
+                            <i class="bi bi-trash3 me-2"></i> Cancelar Venta
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+</div>
+
+<div class="modal fade" id="modalPrecioVariable" tabindex="-1">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 15px;">
+            <div class="modal-body p-4 text-center">
+                <i class="bi bi-currency-dollar fs-1 text-warning"></i>
+                <h5 class="fw-bold mt-2">Monto del Servicio</h5>
+                <p class="small text-muted" id="txtNombreServicioVariable"></p>
+                <input type="hidden" id="idServicioVariable">
+                <div class="mb-3">
+                    <input type="number" step="0.50" class="form-control form-control-lg text-center fw-bold" id="inputPrecioManual" placeholder="0.00">
+                </div>
+                <button type="button" class="btn btn-dark w-100" onclick="confirmarPrecioVariable()">Agregar a Cuenta</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalCobro" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 15px; border: none;">
+            <div class="modal-header border-0 pb-0">
+                <h4 class="modal-title fw-bold" style="color: var(--brand-shadow);">Procesar Pago</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row">
+                    <div class="col-md-7 border-end pe-4">
+                        <h6 class="text-muted small fw-bold text-uppercase mb-3">Método Autorizado</h6>
+                        <div class="row g-2" id="contenedorMetodosPago">
+                            <div class="col-6"><button class="payment-method-btn w-100 active" onclick="seleccionarMetodo('EFECTIVO', this)"><i class="bi bi-cash fs-4 d-block mb-1"></i>Efectivo</button></div>
+                            <div class="col-6"><button class="payment-method-btn w-100" onclick="seleccionarMetodo('TARJETA_DEBITO', this)"><i class="bi bi-credit-card fs-4 d-block mb-1"></i>T. Débito</button></div>
+                            <div class="col-6"><button class="payment-method-btn w-100" onclick="seleccionarMetodo('TARJETA_CREDITO', this)"><i class="bi bi-credit-card-2-front fs-4 d-block mb-1"></i>T. Crédito</button></div>
+                            <div class="col-6"><button class="payment-method-btn w-100" onclick="seleccionarMetodo('TRANSFERENCIA', this)"><i class="bi bi-phone fs-4 d-block mb-1"></i>Transferencia</button></div>
+                            <div class="col-6"><button class="payment-method-btn w-100" onclick="seleccionarMetodo('TARJETA_GOBIERNO', this)"><i class="bi bi-person-badge fs-4 d-block mb-1"></i>T. Gobierno</button></div>
+                            <div class="col-6"><button class="payment-method-btn w-100" onclick="seleccionarMetodo('QR_GOBIERNO', this)"><i class="bi bi-qr-code-scan fs-4 d-block mb-1"></i>QR Gobierno</button></div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-5 ps-4 d-flex flex-column">
+                        <div class="text-center mb-4">
+                            <div class="small text-muted fw-bold">TOTAL A PAGAR</div>
+                            <div class="fs-1 fw-bold" style="color: var(--brand-stone);" id="modalTotalCobrar">$0.00</div>
+                        </div>
+
+                        <div id="panelCambioEfectivo">
+                            <label class="form-label small fw-bold text-muted">Efectivo Recibido</label>
+                            <div class="input-group input-group-lg mb-3">
+                                <span class="input-group-text bg-light">$</span>
+                                <input type="number" id="inputEfectivo" class="form-control fw-bold" onkeyup="calcularCambio()">
+                            </div>
+                            <div class="d-flex justify-content-between p-3 rounded bg-light border">
+                                <span class="fw-bold text-muted">Cambio:</span>
+                                <span class="fw-bold fs-5 text-success" id="txtCambio">$0.00</span>
+                            </div>
+                        </div>
+
+                        <button class="btn btn-premium btn-lg w-100 mt-auto" onclick="ejecutarVentaBaseDatos()" id="btnConfirmarPago">
+                            Confirmar y Facturar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script th:inline="javascript">
+    const idCajeroActual = /*[[${usuarioLogueado.id}]]*/ 0;
+
+    let carrito = [];
+    let metodoPagoSeleccionado = 'EFECTIVO';
+    let modalPrecioVar, modalCobroUI;
+
+    let debounceTimer;
+    const inputScanner = document.getElementById('posScanner');
+    const resultadosDiv = document.getElementById('resultadosBusqueda');
+
+    document.addEventListener('DOMContentLoaded', function() {
+
+        // 1. VALIDACIÓN EN TIEMPO REAL: ¿Tiene caja abierta?
+        fetch(`/api/cortes-caja/activa/usuario/${idCajeroActual}`)
+            .then(res => {
+                if (!res.ok) {
+                    alert("Aviso de Seguridad: Debes abrir un turno de caja para poder ingresar a la terminal de cobro.");
+                    window.location.href = '/corte-caja';
+                } else {
+                    // Si sí tiene caja, encendemos el Punto de Venta
+                    cargarServiciosRapidos(); // <--- INYECTAMOS LA CARGA DE ATAJOS
+
+                    modalPrecioVar = new bootstrap.Modal(document.getElementById('modalPrecioVariable'));
+                    modalCobroUI = new bootstrap.Modal(document.getElementById('modalCobro'));
+                    inputScanner.focus();
+
+                    inputScanner.addEventListener('keydown', manejarEscannerPuro);
+                    inputScanner.addEventListener('input', manejarBusquedaEnTiempoReal);
+
+                    document.addEventListener('click', (e) => {
+                        if(!inputScanner.contains(e.target) && !resultadosDiv.contains(e.target)) {
+                            resultadosDiv.style.display = 'none';
+                        }
+                    });
+                }
+            })
+            .catch(err => console.error("Error validando caja:", err));
+    });
+
+    // --- CARGAR SERVICIOS RÁPIDOS EN LA COLUMNA DERECHA ---
+    function cargarServiciosRapidos() {
+        fetch('/api/servicios')
+            .then(res => res.json())
+            .then(servicios => {
+                const panel = document.getElementById('panelServiciosRapidos');
+                panel.innerHTML = '';
+
+                // CORRECCIÓN: Filtramos para ignorar los inactivos
+                const serviciosActivos = servicios.filter(s => s.activo !== false);
+
+                if (serviciosActivos.length === 0) {
+                    panel.innerHTML = `<div class="col-12 text-center text-white-50 small mt-2">No hay servicios disponibles.</div>`;
+                    return;
+                }
+
+                serviciosActivos.forEach(s => {
+                    const strServicio = encodeURIComponent(JSON.stringify(s));
+                    panel.innerHTML += `
+                        <div class="col-6">
+                            <button class="btn service-btn w-100 text-truncate" title="${s.nombre}" onclick="seleccionarDesdeBuscador('SERVICIO', '${strServicio}')">
+                                ${s.nombre}
+                            </button>
+                        </div>
+                    `;
+                });
+            })
+            .catch(err => console.error("Error al cargar servicios rápidos:", err));
+    }
+
+    // --- MOTOR DEL BUSCADOR EN TIEMPO REAL ---
+    function manejarBusquedaEnTiempoReal(e) {
+        clearTimeout(debounceTimer);
+        const query = e.target.value.trim();
+
+        if (query.length < 2) {
+            resultadosDiv.style.display = 'none';
+            return;
+        }
+
+        debounceTimer = setTimeout(() => {
+            if (!isNaN(query) && query.length >= 4) {
+                // Buscador en tiempo real por Código de Barras
+                fetch(`/api/productos/codigo/${query}`)
+                    .then(res => res.ok ? res.json() : null)
+                    .then(prod => {
+                        if (prod && prod.activo !== false) {
+                            mostrarResultadosDropdown([prod], []);
+                        } else {
+                            mostrarResultadosDropdown([], []);
+                        }
+                    })
+                    .catch(err => console.error("Error:", err));
+
+            } else {
+                // Buscador en tiempo real por Texto (Nombres)
+                Promise.all([
+                    fetch(`/api/productos/buscar?nombre=${query}`).then(res => res.json()),
+                    fetch(`/api/servicios/buscar?nombre=${query}`).then(res => res.json())
+                ])
+                    .then(([productos, servicios]) => {
+                        // CORRECCIÓN: Ahora también filtramos los servicios inactivos
+                        const productosActivos = productos.filter(p => p.activo !== false);
+                        const serviciosActivos = servicios.filter(s => s.activo !== false);
+
+                        mostrarResultadosDropdown(productosActivos, serviciosActivos);
+                    })
+                    .catch(err => console.error("Error múltiple:", err));
+            }
+        }, 300);
+    }
+
+    function mostrarResultadosDropdown(productos, servicios) {
+        resultadosDiv.innerHTML = '';
+        const itemsTotales = productos.length + servicios.length;
+
+        if (itemsTotales === 0) {
+            resultadosDiv.innerHTML = `<li class="p-3 text-muted text-center small">No hay coincidencias</li>`;
+            resultadosDiv.style.display = 'block';
+            return;
+        }
+
+        productos.forEach(p => {
+            const dataStr = encodeURIComponent(JSON.stringify(p));
+            resultadosDiv.innerHTML += `
+                <li class="autocomplete-item" onclick="seleccionarDesdeBuscador('PRODUCTO', '${dataStr}')">
+                    <div>
+                        <div class="item-title">${p.nombre}</div>
+                        <div class="item-subtitle"><i class="bi bi-upc me-1"></i>${p.codigoBarras || 'S/C'} • Stock: ${p.stock}</div>
+                    </div>
+                    <div class="item-price">$${p.precioVenta.toFixed(2)}</div>
+                </li>
+            `;
+        });
+
+        servicios.forEach(s => {
+            const dataStr = encodeURIComponent(JSON.stringify(s));
+            resultadosDiv.innerHTML += `
+                <li class="autocomplete-item" onclick="seleccionarDesdeBuscador('SERVICIO', '${dataStr}')">
+                    <div>
+                        <div class="item-title">${s.nombre}</div>
+                        <div class="item-subtitle" style="color: var(--brand-shadow);"><i class="bi bi-star-fill me-1 text-warning"></i>Servicio</div>
+                    </div>
+                    <div class="item-price">$${s.precioVenta.toFixed(2)}</div>
+                </li>
+            `;
+        });
+
+        resultadosDiv.style.display = 'block';
+    }
+
+    // --- MOTOR DEL ESCÁNER FÍSICO ---
+    function manejarEscannerPuro(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            clearTimeout(debounceTimer);
+
+            const query = inputScanner.value.trim();
+            if (query === '') return;
+
+            if (!isNaN(query) && query.length >= 5) {
+                // LECTOR DE CÓDIGO DE BARRAS
+                fetch(`/api/productos/codigo/${query}`)
+                    .then(res => {
+                        if(res.ok) return res.json();
+                        throw new Error('Producto no encontrado en catálogo');
+                    })
+                    .then(prod => {
+                        if (prod.activo === false) {
+                            alert(`El producto '${prod.nombre}' está desactivado y no puede venderse.`);
+                            limpiarBuscador();
+                            return;
+                        }
+
+                        agregarProductoACarrito(prod);
+                        limpiarBuscador();
+                    })
+                    .catch(err => alert(err.message));
+            } else {
+                // Seleccionar desde menú desplegable
+                const primerItem = document.querySelector('.autocomplete-item');
+                if(primerItem) {
+                    primerItem.click();
+                } else {
+                    alert('Por favor, selecciona un artículo de la lista.');
+                }
+            }
+        }
+    }
+
+    function seleccionarDesdeBuscador(tipo, dataStrEnc) {
+        const itemObj = JSON.parse(decodeURIComponent(dataStrEnc));
+        if (tipo === 'PRODUCTO') {
+            agregarProductoACarrito(itemObj);
+        } else {
+            agregarServicioACarrito(itemObj);
+        }
+        limpiarBuscador();
+    }
+
+    function limpiarBuscador() {
+        inputScanner.value = '';
+        resultadosDiv.style.display = 'none';
+        inputScanner.focus();
+    }
+
+    // --- LÓGICA DEL CARRITO ---
+
+    function agregarProductoACarrito(prod) {
+        const index = carrito.findIndex(i => i.idItem === prod.id && i.tipoItem === 'PRODUCTO');
+
+        if (index > -1) {
+            if(carrito[index].cantidad + 1 > prod.stock) {
+                alert(`Inventario insuficiente. Solo quedan ${prod.stock} en stock.`);
+                return;
+            }
+            carrito[index].cantidad++;
+            carrito[index].subtotal = carrito[index].cantidad * carrito[index].precioUnitario;
+        } else {
+            if(prod.stock <= 0) {
+                alert('No hay stock disponible de este producto.');
+                return;
+            }
+            carrito.push({
+                tipoItem: 'PRODUCTO',
+                idItem: prod.id,
+                descripcion: prod.nombre,
+                precioUnitario: prod.precioVenta,
+                cantidad: 1,
+                subtotal: prod.precioVenta,
+                stockMaximo: prod.stock
+            });
+        }
+        renderizarCarrito();
+    }
+
+    function agregarServicioACarrito(serv) {
+        if (serv.precioVenta === 0.00) {
+            document.getElementById('idServicioVariable').value = serv.id;
+            document.getElementById('txtNombreServicioVariable').innerText = serv.nombre;
+            document.getElementById('inputPrecioManual').value = '';
+            modalPrecioVar.show();
+            setTimeout(() => document.getElementById('inputPrecioManual').focus(), 500);
+            return;
+        }
+
+        const index = carrito.findIndex(i => i.idItem === serv.id && i.tipoItem === 'SERVICIO' && i.precioUnitario === serv.precioVenta);
+        if (index > -1) {
+            carrito[index].cantidad++;
+            carrito[index].subtotal = carrito[index].cantidad * carrito[index].precioUnitario;
+        } else {
+            carrito.push({
+                tipoItem: 'SERVICIO',
+                idItem: serv.id,
+                descripcion: serv.nombre,
+                precioUnitario: serv.precioVenta,
+                cantidad: 1,
+                subtotal: serv.precioVenta,
+                stockMaximo: 9999
+            });
+        }
+        renderizarCarrito();
+    }
+
+    function confirmarPrecioVariable() {
+        const id = parseInt(document.getElementById('idServicioVariable').value);
+        const nombre = document.getElementById('txtNombreServicioVariable').innerText;
+        let monto = parseFloat(document.getElementById('inputPrecioManual').value);
+
+        if (isNaN(monto) || monto <= 0) {
+            alert('Ingrese un monto válido mayor a cero.');
+            return;
+        }
+
+        carrito.push({
+            tipoItem: 'SERVICIO',
+            idItem: id,
+            descripcion: nombre + " (Manual)",
+            precioUnitario: monto,
+            cantidad: 1,
+            subtotal: monto,
+            stockMaximo: 9999
+        });
+
+        modalPrecioVar.hide();
+        renderizarCarrito();
+        inputScanner.focus();
+    }
+
+    function renderizarCarrito() {
+        const tbody = document.getElementById('cuerpoCarrito');
+        tbody.innerHTML = '';
+        let total = 0;
+        let articulos = 0;
+
+        carrito.forEach((item, index) => {
+            total += item.subtotal;
+            articulos += item.cantidad;
+
+            const badge = item.tipoItem === 'PRODUCTO' ?
+                '<span class="badge bg-secondary me-2">Prod</span>' :
+                '<span class="badge" style="background-color: var(--brand-shadow); color: var(--brand-mist);">Serv</span>';
+
+            tbody.innerHTML += `
+                <tr>
+                    <td class="text-muted fw-bold">${index + 1}</td>
+                    <td class="fw-bold">${badge}${item.descripcion}</td>
+                    <td class="text-center">
+                        <input type="number" class="item-qty-input fw-bold" value="${item.cantidad}" min="1" max="${item.stockMaximo}"
+                               onchange="actualizarCantidadFila(${index}, this.value)">
+                    </td>
+                    <td class="text-end text-muted">$${item.precioUnitario.toFixed(2)}</td>
+                    <td class="text-end fw-bold" style="color: var(--brand-shadow);">$${item.subtotal.toFixed(2)}</td>
+                    <td class="text-center">
+                        <button class="btn btn-sm btn-link text-danger" onclick="eliminarFila(${index})"><i class="bi bi-x-circle-fill fs-5"></i></button>
+                    </td>
+                </tr>
+            `;
+        });
+
+        document.getElementById('resumenArticulos').innerText = articulos;
+        document.getElementById('resumenTotal').innerText = `$${total.toFixed(2)}`;
+        document.getElementById('btnCobrar').disabled = carrito.length === 0;
+    }
+
+    function actualizarCantidadFila(index, nuevaCantidad) {
+        let cant = parseInt(nuevaCantidad);
+        if (isNaN(cant) || cant < 1) cant = 1;
+
+        if (carrito[index].tipoItem === 'PRODUCTO' && cant > carrito[index].stockMaximo) {
+            alert(`Inventario insuficiente. Solo quedan ${carrito[index].stockMaximo}.`);
+            cant = carrito[index].stockMaximo;
+        }
+
+        carrito[index].cantidad = cant;
+        carrito[index].subtotal = cant * carrito[index].precioUnitario;
+        renderizarCarrito();
+    }
+
+    function eliminarFila(index) {
+        carrito.splice(index, 1);
+        renderizarCarrito();
+    }
+
+    function limpiarCarrito() {
+        if(carrito.length > 0 && confirm('¿Deseas cancelar toda la cuenta actual?')) {
+            carrito = [];
+            renderizarCarrito();
+            inputScanner.focus();
+        }
+    }
+
+    function abrirModalPago() {
+        const total = carrito.reduce((sum, item) => sum + item.subtotal, 0);
+        document.getElementById('modalTotalCobrar').innerText = `$${total.toFixed(2)}`;
+
+        seleccionarMetodo('EFECTIVO', document.querySelector('.payment-method-btn'));
+        document.getElementById('inputEfectivo').value = '';
+        document.getElementById('txtCambio').innerText = '$0.00';
+
+        modalCobroUI.show();
+        setTimeout(() => document.getElementById('inputEfectivo').focus(), 500);
+    }
+
+    function seleccionarMetodo(metodo, btnElement) {
+        metodoPagoSeleccionado = metodo;
+        document.querySelectorAll('.payment-method-btn').forEach(b => b.classList.remove('active'));
+        btnElement.classList.add('active');
+
+        const panelCambio = document.getElementById('panelCambioEfectivo');
+        if (metodo === 'EFECTIVO') {
+            panelCambio.style.display = 'block';
+            setTimeout(() => document.getElementById('inputEfectivo').focus(), 100);
+        } else {
+            panelCambio.style.display = 'none';
+        }
+    }
+
+    function calcularCambio() {
+        const total = carrito.reduce((sum, item) => sum + item.subtotal, 0);
+        const recibido = parseFloat(document.getElementById('inputEfectivo').value);
+
+        if (!isNaN(recibido) && recibido >= total) {
+            const cambio = recibido - total;
+            document.getElementById('txtCambio').innerText = `$${cambio.toFixed(2)}`;
+        } else {
+            document.getElementById('txtCambio').innerText = '$0.00';
+        }
+    }
+
+    function ejecutarVentaBaseDatos() {
+        const total = carrito.reduce((sum, item) => sum + item.subtotal, 0);
+
+        if (metodoPagoSeleccionado === 'EFECTIVO') {
+            const recibido = parseFloat(document.getElementById('inputEfectivo').value);
+            if (isNaN(recibido) || recibido < total) {
+                alert('El monto de efectivo recibido es menor al total a cobrar.');
+                return;
+            }
+        }
+
+        const requestDTO = {
+            idUsuario: idCajeroActual,
+            total: total,
+            metodoPago: metodoPagoSeleccionado,
+            detalles: carrito.map(item => ({
+                tipoItem: item.tipoItem,
+                idItem: item.idItem,
+                cantidad: item.cantidad,
+                precioUnitario: item.precioUnitario,
+                subtotal: item.subtotal
+            }))
+        };
+
+        document.getElementById('btnConfirmarPago').disabled = true;
+
+        fetch('/api/ventas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestDTO)
+        })
+            .then(res => {
+                if(res.ok) return res.json();
+                return res.text().then(err => { throw new Error(err) });
+            })
+            .then(ventaGenerada => {
+                modalCobroUI.hide();
+                carrito = [];
+                renderizarCarrito();
+                alert(`¡Venta cobrada con éxito!\nFolio de Ticket: #${ventaGenerada.id}`);
+                document.getElementById('btnConfirmarPago').disabled = false;
+            })
+            .catch(err => {
+                alert("Error al procesar venta en la BD:\n" + err.message);
+                document.getElementById('btnConfirmarPago').disabled = false;
+            });
+    }
+</script>
+</body>
+</html>
