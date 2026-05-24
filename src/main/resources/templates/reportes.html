@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Reportes y Auditoría')}"></head>
+<style>
+    /* Estilos Premium Consistentes */
+    .table-premium {
+        background-color: var(--white);
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 15px rgba(42, 49, 50, 0.03);
+    }
+    .table-premium thead th {
+        background-color: var(--brand-mist);
+        color: var(--white);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-size: 0.75rem;
+        border: none;
+        padding: 15px 20px;
+    }
+    .table-premium tbody td {
+        vertical-align: middle;
+        padding: 15px 20px;
+        color: var(--brand-shadow);
+        border-bottom: 1px solid rgba(0,0,0,0.03);
+    }
+    .table-premium tbody tr:hover {
+        background-color: #F8FBFC;
+    }
+    .nav-tabs {
+        border-bottom: 2px solid rgba(0,0,0,0.05);
+    }
+    .nav-tabs .nav-link {
+        color: var(--brand-mist);
+        font-weight: 600;
+        border: none;
+        border-bottom: 3px solid transparent;
+        padding: 12px 25px;
+        transition: all 0.3s ease;
+    }
+    .nav-tabs .nav-link:hover {
+        color: var(--brand-shadow);
+    }
+    .nav-tabs .nav-link.active {
+        color: var(--brand-stone);
+        background-color: transparent;
+        border-color: var(--brand-stone);
+    }
+    .label-premium {
+        font-weight: 600;
+        color: var(--brand-shadow);
+        font-size: 0.85rem;
+        margin-bottom: 0.5rem;
+    }
+    /* Subtabla de detalles expansibles */
+    .row-detalle-ticket {
+        background-color: #F4F7F8 !important;
+    }
+    .inner-table-details th {
+        background-color: var(--brand-stone) !important;
+        color: white !important;
+        font-size: 0.7rem !important;
+        padding: 8px 12px !important;
+    }
+    .inner-table-details td {
+        padding: 8px 12px !important;
+        font-size: 0.85rem !important;
+        border-bottom: 1px solid rgba(0,0,0,0.05) !important;
+    }
+</style>
+<body>
+<div class="app-wrapper">
+    <div th:replace="~{fragments/sidebar :: sidebar}"></div>
+
+    <main class="main-content">
+        <div th:replace="~{fragments/header :: header}"></div>
+
+        <div class="content-body">
+
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h4 class="fw-bold mb-0" style="color: var(--brand-shadow);">Centro de Reportes y Auditoría</h4>
+                    <p class="text-muted small mb-0">Monitoreo de seguridad y desglose financiero comercial</p>
+                </div>
+            </div>
+
+            <ul class="nav nav-tabs mb-4" id="reportesTab" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="auditoria-tab" data-bs-toggle="tab" data-bs-target="#auditoria" type="button" role="tab">
+                        <i class="bi bi-shield-check me-2"></i>Bitácora
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="caja-tab" data-bs-toggle="tab" data-bs-target="#caja" type="button" role="tab" onclick="cargarDescuadres()">
+                        <i class="bi bi-cash-stack me-2"></i>Descuadres
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="graficas-tab" data-bs-toggle="tab" data-bs-target="#graficas" type="button" role="tab" onclick="cargarGraficas()">
+                        <i class="bi bi-bar-chart-fill me-2"></i>Gráficas
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="desglose-tab" data-bs-toggle="tab" data-bs-target="#desglose" type="button" role="tab" onclick="establecerFechasDefecto()">
+                        <i class="bi bi-receipt-cutoff me-2"></i>Desglose Ventas
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="config-tab" data-bs-toggle="tab" data-bs-target="#config" type="button" role="tab" onclick="cargarConfiguracionCorreos()">
+                        <i class="bi bi-gear-fill me-2"></i>Configuración
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="reportesTabContent">
+
+                <div class="tab-pane fade show active" id="auditoria" role="tabpanel">
+                    <div class="card premium-card p-3 mb-4 border-0 shadow-sm" style="border-radius: 12px;">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="fw-bold mb-0" style="color: var(--brand-shadow);">Historial de Eventos (Inmutable)</h6>
+                            <button class="btn btn-outline-secondary fw-bold" onclick="cargarAuditoria()">
+                                <i class="bi bi-arrow-clockwise me-2"></i> Actualizar
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-responsive table-premium">
+                        <table class="table mb-0">
+                            <thead>
+                            <tr>
+                                <th>Fecha y Hora</th>
+                                <th>Usuario</th>
+                                <th>Acción Realizada</th>
+                                <th>Detalle del Sistema</th>
+                            </tr>
+                            </thead>
+                            <tbody id="tablaAuditoria">
+                            <tr><td colspan="4" class="text-center text-muted py-4">Cargando bitácora...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="caja" role="tabpanel">
+                    <div class="card premium-card p-3 mb-4 border-0 shadow-sm" style="border-radius: 12px; background-color: rgba(118, 54, 38, 0.05);">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="fw-bold mb-0" style="color: var(--brand-autumn);"><i class="bi bi-exclamation-triangle-fill me-2"></i>Turnos con Faltantes o Sobrantes</h6>
+                                <small class="text-muted">El sistema detectó inconsistencias en el corte a ciegas de estos turnos.</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="table-responsive table-premium">
+                        <table class="table mb-0">
+                            <thead>
+                            <tr>
+                                <th>Fecha de Cierre</th>
+                                <th>Cajero</th>
+                                <th class="text-center">Declarado (Físico)</th>
+                                <th class="text-center">Esperado (Sistema)</th>
+                                <th class="text-end">Diferencia</th>
+                            </tr>
+                            </thead>
+                            <tbody id="tablaDescuadres">
+                            <tr><td colspan="5" class="text-center text-muted py-4">Cargando discrepancias...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="graficas" role="tabpanel">
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="card premium-card p-4 border-0 shadow-sm" style="border-radius: 12px;">
+                                <h6 class="fw-bold mb-4 text-center" style="color: var(--brand-shadow);">Top 10 Productos Más Vendidos</h6>
+                                <canvas id="chartProductos" height="250"></canvas>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card premium-card p-4 border-0 shadow-sm" style="border-radius: 12px;">
+                                <h6 class="fw-bold mb-4 text-center" style="color: var(--brand-shadow);">Top 10 Servicios Más Realizados</h6>
+                                <canvas id="chartServicios" height="250"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="desglose" role="tabpanel">
+                    <div class="card premium-card p-4 mb-4 border-0 shadow-sm" style="border-radius: 12px;">
+                        <div class="row align-items-end g-3">
+                            <div class="col-md-4">
+                                <label class="label-premium">Fecha/Hora Inicial</label>
+                                <input type="datetime-local" id="filtroFechaInicio" class="form-control input-premium">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="label-premium">Fecha/Hora Final</label>
+                                <input type="datetime-local" id="filtroFechaFin" class="form-control input-premium">
+                            </div>
+                            <div class="col-md-4">
+                                <button class="btn btn-premium w-100 py-2 fw-bold" onclick="generarReporteVentas()">
+                                    <i class="bi bi-funnel-fill me-2"></i>Generar Desglose
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="table-responsive table-premium">
+                        <table class="table mb-0">
+                            <thead>
+                            <tr>
+                                <th width="5%"></th>
+                                <th>Folio</th>
+                                <th>Fecha/Hora</th>
+                                <th>Método de Pago</th>
+                                <th class="text-center">Estado</th>
+                                <th class="text-end">Total Cobrado</th>
+                            </tr>
+                            </thead>
+                            <tbody id="tablaMasterVentas">
+                            <tr><td colspan="6" class="text-center text-muted py-4">Selecciona un rango de fechas para consultar.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="config" role="tabpanel">
+                    <div class="row justify-content-center">
+                        <div class="col-md-8">
+                            <div class="card premium-card p-5 border-0 shadow-sm" style="border-radius: 12px;">
+                                <div class="text-center mb-4">
+                                    <i class="bi bi-envelope-at-fill fs-1" style="color: var(--brand-stone);"></i>
+                                    <h5 class="fw-bold mt-2" style="color: var(--brand-shadow);">Destinatarios del Reporte Semanal</h5>
+                                    <p class="text-muted small">El sistema enviará el resumen financiero a estas direcciones de correo todos los viernes al cerrar la caja.</p>
+                                </div>
+
+                                <div class="mb-4">
+                                    <label class="label-premium">Correos Electrónicos (Separados por coma)</label>
+                                    <textarea class="form-control input-premium" id="inputCorreosReporte" rows="3" placeholder="ejemplo1@gmail.com, contador@empresa.com"></textarea>
+                                </div>
+
+                                <button class="btn btn-premium w-100 py-3 fw-bold" onclick="guardarConfiguracionCorreos()">
+                                    <i class="bi bi-floppy-fill me-2"></i>Guardar Configuración
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    let myChartProductos = null;
+    let myChartServicios = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        cargarAuditoria();
+    });
+
+    // Establecer fechas por defecto para el desglose (evitando el desfase UTC)
+    function establecerFechasDefecto() {
+        if(!document.getElementById('filtroFechaInicio').value) {
+            const hoy = new Date();
+            const year = hoy.getFullYear();
+            const month = String(hoy.getMonth() + 1).padStart(2, '0');
+            const day = String(hoy.getDate()).padStart(2, '0');
+
+            // Formato local estricto YYYY-MM-DDTHH:mm (Ignora la zona horaria del servidor)
+            document.getElementById('filtroFechaInicio').value = `${year}-${month}-${day}T00:00`;
+            document.getElementById('filtroFechaFin').value = `${year}-${month}-${day}T23:59`;
+        }
+    }
+
+    // --- LÓGICA DE AUDITORÍA MANTENIDA ---
+    function cargarAuditoria() {
+        fetch('/api/auditoria')
+            .then(res => res.json())
+            .then(data => {
+                const tbody = document.getElementById('tablaAuditoria');
+                tbody.innerHTML = '';
+                data.sort((a, b) => new Date(b.fechaHora) - new Date(a.fechaHora));
+                if(data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-4">No hay eventos registrados.</td></tr>`;
+                    return;
+                }
+                data.forEach(log => {
+                    const fechaFormat = new Date(log.fechaHora).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'medium' });
+                    const badgeClass = log.accion.includes('ELIMINAR') || log.accion.includes('ERROR') ? 'bg-danger' : 'bg-secondary';
+                    tbody.innerHTML += `
+                        <tr>
+                            <td class="small text-muted">${fechaFormat}</td>
+                            <td class="fw-bold text-dark"><i class="bi bi-person-badge me-1"></i>${log.usuario ? log.usuario.username : 'Sistema'}</td>
+                            <td><span class="badge ${badgeClass}">${log.accion}</span></td>
+                            <td class="small">${log.descripcion || '-'}</td>
+                        </tr>
+                    `;
+                });
+            }).catch(err => console.error(err));
+    }
+
+    // --- LÓGICA DE DESCUADRES MANTENIDA ---
+    function cargarDescuadres() {
+        fetch('/api/cortes-caja/discrepancias')
+            .then(res => res.json())
+            .then(data => {
+                const tbody = document.getElementById('tablaDescuadres');
+                tbody.innerHTML = '';
+                data.sort((a, b) => new Date(b.fechaCierre) - new Date(a.fechaCierre));
+                if(data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="text-center text-success py-4"><i class="bi bi-check-circle-fill me-2"></i>¡Excelente! No hay descuadres de caja.</td></tr>`;
+                    return;
+                }
+                data.forEach(corte => {
+                    const fechaFormat = corte.fechaCierre ? new Date(corte.fechaCierre).toLocaleString('es-MX') : 'Turno Abierto';
+                    const diff = parseFloat(corte.diferencia);
+                    let diffDisplay = '';
+                    if (diff < 0) diffDisplay = `<span class="fw-bold text-danger">-$${Math.abs(diff).toFixed(2)} (Faltante)</span>`;
+                    else if (diff > 0) diffDisplay = `<span class="fw-bold text-warning text-dark">+$${diff.toFixed(2)} (Sobrante)</span>`;
+                    else diffDisplay = `<span class="text-muted">Exacto</span>`;
+
+                    tbody.innerHTML += `
+                        <tr>
+                            <td class="text-muted small">${fechaFormat}</td>
+                            <td class="fw-bold">${corte.usuario.username}</td>
+                            <td class="text-center">$${parseFloat(corte.montoDeclarado).toFixed(2)}</td>
+                            <td class="text-center">$${parseFloat(corte.montoEsperado).toFixed(2)}</td>
+                            <td class="text-end">${diffDisplay}</td>
+                        </tr>
+                    `;
+                });
+            }).catch(err => console.error(err));
+    }
+
+    // --- LÓGICA DE GRÁFICAS MANTENIDA CORREGIDA ---
+    function cargarGraficas() {
+        fetch('/api/ventas/analitica/top-productos').then(res => res.json()).then(data => {
+            const nombres = data.map(item => item[0]);
+            const cantidades = data.map(item => item[1]);
+            dibujarGrafica('chartProductos', myChartProductos, nombres, cantidades, 'Productos', '#4A5B60');
+        });
+        fetch('/api/ventas/analitica/top-servicios').then(res => res.json()).then(data => {
+            const nombres = data.map(item => item[0]);
+            const cantidades = data.map(item => item[1]);
+            dibujarGrafica('chartServicios', myChartServicios, nombres, cantidades, 'Servicios', '#8A999F');
+        });
+    }
+
+    function dibujarGrafica(canvasId, chartInstance, labels, data, labelTitle, colorHex) {
+        const ctx = document.getElementById(canvasId).getContext('2d');
+        if (chartInstance != null) chartInstance.destroy();
+        const newChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{ data: data, backgroundColor: colorHex, borderRadius: 4 }]
+            },
+            options: { responsive: true, plugins: { legend: { display: false } } }
+        });
+        if(canvasId === 'chartProductos') myChartProductos = newChart;
+        if(canvasId === 'chartServicios') myChartServicios = newChart;
+    }
+
+    // --- LÓGICA DE DESGLOSE MANTENIDA ---
+    function generarReporteVentas() {
+        const inicio = document.getElementById('filtroFechaInicio').value;
+        const fin = document.getElementById('filtroFechaFin').value;
+
+        if(!inicio || !fin) { alert('Establece ambas fechas.'); return; }
+
+        fetch(`/api/ventas/reporte/fechas?inicio=${inicio}:00&fin=${fin}:00`)
+            .then(res => res.json())
+            .then(ventas => {
+                const tbody = document.getElementById('tablaMasterVentas');
+                tbody.innerHTML = '';
+                if(ventas.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-4">No se registraron ventas.</td></tr>`;
+                    return;
+                }
+                ventas.sort((a, b) => new Date(b.fechaHora) - new Date(a.fechaHora));
+                ventas.forEach(v => {
+                    const dateFmt = new Date(v.fechaHora).toLocaleString('es-MX');
+                    const badgeEst = v.estado === 'COMPLETADA' ? 'bg-success' : 'bg-warning text-dark';
+                    tbody.innerHTML += `
+                        <tr id="row-master-${v.id}">
+                            <td><button class="btn btn-sm btn-light py-0 px-2 border" onclick="toggleDetallesVenta(${v.id})"><i class="bi bi-chevron-down" id="icon-toggle-${v.id}"></i></button></td>
+                            <td class="fw-bold text-muted">V-${v.id}</td>
+                            <td>${dateFmt}</td>
+                            <td class="small fw-bold text-secondary">${v.metodoPago}</td>
+                            <td class="text-center"><span class="badge ${badgeEst}">${v.estado.replace('_', ' ')}</span></td>
+                            <td class="text-end fw-bold text-dark">$${v.total.toFixed(2)}</td>
+                        </tr>
+                        <tr id="row-child-${v.id}" class="row-detalle-ticket d-none">
+                            <td></td>
+                            <td colspan="5" id="container-child-${v.id}" class="py-3 px-4"><div class="text-muted small"><span class="spinner-border spinner-border-sm me-2"></span>Cargando artículos...</div></td>
+                        </tr>
+                    `;
+                });
+            });
+    }
+
+    function toggleDetallesVenta(idVenta) {
+        const rowChild = document.getElementById(`row-child-${idVenta}`);
+        const icon = document.getElementById(`icon-toggle-${idVenta}`);
+        const container = document.getElementById(`container-child-${idVenta}`);
+
+        if(rowChild.classList.contains('d-none')) {
+            rowChild.classList.remove('d-none');
+            icon.className = "bi bi-chevron-up";
+            fetch(`/api/ventas/${idVenta}`).then(res => res.json()).then(data => {
+                let subtableHtml = `<div class="table-responsive inner-table-details rounded border shadow-sm"><table class="table table-sm mb-0 bg-white"><thead><tr><th>Artículo</th><th class="text-center">Tipo</th><th class="text-center">Cant.</th><th class="text-end">P.U.</th><th class="text-end">Subtotal</th></tr></thead><tbody>`;
+                data.detalles.forEach(d => {
+                    subtableHtml += `<tr><td class="fw-bold text-dark">${d.nombre}</td><td class="text-center small text-muted">${d.tipo}</td><td class="text-center fw-bold">${d.cantidadOriginal}</td><td class="text-end">$${d.precioUnitario.toFixed(2)}</td><td class="text-end fw-bold text-secondary">$${d.subtotal.toFixed(2)}</td></tr>`;
+                });
+                subtableHtml += `</tbody></table></div>`;
+                container.innerHTML = subtableHtml;
+            });
+        } else {
+            rowChild.classList.add('d-none');
+            icon.className = "bi bi-chevron-down";
+        }
+    }
+
+    // ==========================================
+    // NUEVA LÓGICA: CONFIGURACIÓN DE CORREOS
+    // ==========================================
+    function cargarConfiguracionCorreos() {
+        fetch('/api/configuracion/correos')
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('inputCorreosReporte').value = data.correos || '';
+            });
+    }
+
+    function guardarConfiguracionCorreos() {
+        const inputCrudo = document.getElementById('inputCorreosReporte').value;
+
+        if (inputCrudo.trim() === '') {
+            alert('Por favor escribe al menos un correo electrónico.');
+            return;
+        }
+
+        // 1. DIVIDE Y VENCERÁS: Separar por comas, quitar espacios extra y pasar a minúsculas
+        let arrayCorreos = inputCrudo.split(',')
+            .map(correo => correo.trim().toLowerCase())
+            .filter(correo => correo !== '');
+
+        // 2. Destruir Duplicados: Convertimos el Array a un 'Set' (conjunto único) y de vuelta a Array
+        let correosUnicos = [...new Set(arrayCorreos)];
+
+        // 3. QA Estricto: Validar que tengan formato de correo electrónico real
+        const regexCorreo = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        let correosInvalidos = correosUnicos.filter(correo => !regexCorreo.test(correo));
+
+        if (correosInvalidos.length > 0) {
+            alert("Los siguientes correos tienen un formato inválido:\n" + correosInvalidos.join("\n") + "\n\nPor favor corrígelos antes de guardar.");
+            return;
+        }
+
+        // 4. Volvemos a unir los correos válidos y únicos separados por coma para la BD
+        const correosFinales = correosUnicos.join(',');
+
+        // 5. Enviar al Backend
+        fetch('/api/configuracion/correos', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ correos: correosFinales })
+        })
+            .then(res => {
+                if(res.ok) {
+                    alert('¡Configuración guardada exitosamente y sin duplicados!');
+
+                    // Limpiamos el espacio temporalmente (como solicitaste)
+                    document.getElementById('inputCorreosReporte').value = '';
+
+                    // Y volvemos a cargar de la BD para que el usuario vea su lista limpia y formateada
+                    cargarConfiguracionCorreos();
+                } else {
+                    alert('Hubo un error al guardar los correos.');
+                }
+            });
+    }
+</script>
+</body>
+</html>

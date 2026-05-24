@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -17,6 +18,13 @@ public class CorteCajaService {
 
     @Autowired
     private CorteCajaRepository corteCajaRepository;
+
+    // INYECTAMOS EL SERVICIO DE CORREOS
+    @Autowired
+    private ReporteEmailService emailService;
+
+    @Autowired
+    private ConfiguracionService configuracionService;
 
     // 1. Apertura de Turno (Al iniciar el día o cambio de turno)
     @Transactional
@@ -45,9 +53,7 @@ public class CorteCajaService {
             throw new IllegalStateException("Esta caja ya fue cerrada anteriormente.");
         }
 
-        // Matemáticas del corte (Declarado - Esperado = Diferencia)
-        // Ejemplo Faltante: 500 declarados - 550 esperados = -50 de diferencia
-        // Ejemplo Sobrante: 600 declarados - 550 esperados = +50 de diferencia
+        // Matemáticas del corte
         BigDecimal diferencia = montoDeclarado.subtract(montoEsperado);
 
         corte.setMontoEsperado(montoEsperado);
@@ -55,7 +61,25 @@ public class CorteCajaService {
         corte.setDiferencia(diferencia);
         corte.setFechaCierre(LocalDateTime.now());
 
-        return corteCajaRepository.save(corte);
+        CorteCaja corteGuardado = corteCajaRepository.save(corte);
+
+        // --- MAGIA AUTOMATIZADA: DISPARADOR DEL VIERNES LEYENDO LA BD ---
+        // if (corteGuardado.getFechaCierre().getDayOfWeek() == DayOfWeek.FRIDAY) {
+        String correosGuardados = configuracionService.obtenerCorreosReporte();
+
+        if (!correosGuardados.isEmpty()) {
+            String[] destinatarios = correosGuardados.split(",");
+
+            // Calculamos desde el Domingo a las 00:00 hasta este preciso momento
+            LocalDateTime finSemana = corteGuardado.getFechaCierre();
+            LocalDateTime inicioSemana = finSemana.with(java.time.temporal.TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY))
+                    .withHour(0).withMinute(0).withSecond(0);
+
+            // Llamamos a la nueva función HTML
+            emailService.enviarReporteSemanalHtml(destinatarios, inicioSemana, finSemana);
+        }
+        // }
+        return corteGuardado;
     }
 
     // 3. Consultas para el Dashboard del Administrador

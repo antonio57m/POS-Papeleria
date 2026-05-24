@@ -34,4 +34,7 @@ public interface CorteCajaRepository extends JpaRepository<CorteCaja, Integer> {
     // Busca turnos que se abrieron en días anteriores y nunca se cerraron.
     @Query("SELECT c FROM CorteCaja c WHERE c.fechaCierre IS NULL AND c.fechaApertura < :fechaCorte")
     List<CorteCaja> findCortesOlvidados(@Param("fechaCorte") LocalDateTime fechaCorte);
+
+    // NUEVO MÉTODO A AGREGAR PARA EL REPORTE SEMANAL
+    List<CorteCaja> findByFechaCierreBetween(LocalDateTime inicio, LocalDateTime fin);
 }

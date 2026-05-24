@@ -130,11 +130,34 @@ public class VentaController {
 
     @GetMapping("/analitica/top-productos")
     public ResponseEntity<List<Object[]>> obtenerTopProductos() {
-        return ResponseEntity.ok(detalleVentaService.obtenerProductosMasVendidos());
+        List<Object[]> rawData = detalleVentaService.obtenerProductosMasVendidos();
+
+        List<Object[]> dataConNombres = rawData.stream().map(row -> {
+            // Convertimos el ID de manera segura y buscamos su nombre
+            Integer idItem = ((Number) row[0]).intValue();
+            String nombre = productoService.buscarPorId(idItem)
+                    .map(p -> p.getNombre())
+                    .orElse("Producto Eliminado");
+
+            return new Object[]{nombre, row[1]};
+        }).collect(Collectors.toList());
+
+        return ResponseEntity.ok(dataConNombres);
     }
 
     @GetMapping("/analitica/top-servicios")
     public ResponseEntity<List<Object[]>> obtenerTopServicios() {
-        return ResponseEntity.ok(detalleVentaService.obtenerServiciosMasRealizados());
+        List<Object[]> rawData = detalleVentaService.obtenerServiciosMasRealizados();
+
+        List<Object[]> dataConNombres = rawData.stream().map(row -> {
+            Integer idItem = ((Number) row[0]).intValue();
+            String nombre = servicioService.buscarPorId(idItem)
+                    .map(s -> s.getNombre())
+                    .orElse("Servicio Eliminado");
+
+            return new Object[]{nombre, row[1]};
+        }).collect(Collectors.toList());
+
+        return ResponseEntity.ok(dataConNombres);
     }
 }

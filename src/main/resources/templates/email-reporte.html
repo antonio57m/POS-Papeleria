@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reporte Semanal</title>
+    <style>
+        /* =======================================
+           ESTILOS BASE (ESCRITORIO / WEB)
+           ======================================= */
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f7f8; color: #333; margin: 0; padding: 20px; -webkit-font-smoothing: antialiased; }
+        .container { max-width: 800px; margin: auto; background: #ffffff; padding: 30px; border-radius: 8px; border: 1px solid #e0e0e0; }
+        h1 { color: #4A5B60; text-align: center; margin-top: 0; font-size: 24px;}
+        h2 { color: #2A3132; border-bottom: 2px solid #4A5B60; padding-bottom: 8px; margin-top: 30px; font-size: 18px; }
+
+        /* Contenedor fluido para evitar que la tabla rompa el diseño */
+        .table-wrapper { width: 100%; overflow-x: auto; }
+
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14px; }
+        th { background-color: #4A5B60; color: #ffffff; padding: 12px 10px; text-align: left; }
+        td { padding: 12px 10px; border-bottom: 1px solid #eeeeee; }
+
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+
+        /* Prevenir que los montos ($) se rompan en dos líneas en pantallas pequeñas */
+        .nowrap { white-space: nowrap; }
+
+        /* Subtabla */
+        .inner-table { margin-top: 10px; margin-bottom: 10px; border: 1px solid #dddddd; width: 100%; }
+        .inner-table th { background-color: #763626; font-size: 12px; padding: 8px; }
+        .inner-table td { background-color: #fcfcfc; font-size: 12px; padding: 8px; }
+
+        .footer { font-size: 12px; text-align: center; color: #777; margin-top: 40px; border-top: 1px solid #eee; padding-top: 20px; }
+
+        /* =======================================
+           MAGIA SENIOR: MEDIA QUERIES PARA MÓVIL
+           ======================================= */
+        @media only screen and (max-width: 600px) {
+            body { padding: 10px !important; }
+            .container { padding: 15px !important; }
+            h1 { font-size: 20px !important; }
+            h2 { font-size: 16px !important; }
+
+            /* Reducimos fuentes y paddings para que las 5 columnas encajen sin apachurrarse */
+            table { font-size: 11px !important; }
+            th, td { padding: 8px 4px !important; }
+
+            .inner-table th, .inner-table td { font-size: 10px !important; padding: 6px 3px !important; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Resumen Financiero Semanal</h1>
+    <p class="text-center" style="color: #666; margin-bottom: 30px;">
+        Periodo: <strong th:text="${#temporals.format(inicio, 'dd/MM/yyyy')}"></strong> al <strong th:text="${#temporals.format(fin, 'dd/MM/yyyy')}"></strong>
+    </p>
+
+    <h2>1. Cortes de Caja Realizados</h2>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+            <tr>
+                <th>Fecha Cierre</th>
+                <th>Cajero</th>
+                <th class="text-right">Declarado</th>
+                <th class="text-right">Esperado</th>
+                <th class="text-right">Diferencia</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="c : ${cortes}">
+                <td th:text="${#temporals.format(c.fechaCierre, 'dd/MM/yy HH:mm')}"></td>
+                <td th:text="${c.usuario.username}"></td>
+                <td class="text-right nowrap" th:text="'$' + ${c.montoDeclarado}"></td>
+                <td class="text-right nowrap" th:text="'$' + ${c.montoEsperado}"></td>
+                <td class="text-right nowrap">
+                    <span th:if="${c.diferencia < 0}" style="color: #d9534f; font-weight: bold;" th:text="'-$' + ${c.diferencia * -1}"></span>
+                    <span th:if="${c.diferencia > 0}" style="color: #f0ad4e; font-weight: bold;" th:text="'+$' + ${c.diferencia}"></span>
+                    <span th:if="${c.diferencia == 0}" style="color: #5cb85c; font-weight: bold;">Exacto</span>
+                </td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(cortes)}">
+                <td colspan="5" class="text-center">No se realizaron cortes de caja en este periodo.</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h2>2. Desglose de Ventas</h2>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+            <tr>
+                <th>Folio</th>
+                <th>Fecha</th>
+                <th>Método</th>
+                <th>Estado</th>
+                <th class="text-right">Total</th>
+            </tr>
+            </thead>
+            <tbody>
+            <th:block th:each="v : ${ventas}">
+                <tr>
+                    <td style="font-weight: bold;">V-<span th:text="${v.id}"></span></td>
+                    <td th:text="${#temporals.format(v.fecha, 'dd/MM/yy HH:mm')}"></td>
+                    <td th:text="${v.metodoPago}"></td>
+                    <td th:text="${v.estado}"></td>
+                    <td class="text-right nowrap" style="font-weight: bold;" th:text="'$' + ${v.total}"></td>
+                </tr>
+                <tr>
+                    <td colspan="5" style="padding: 0; border: none;">
+                        <table class="inner-table">
+                            <thead>
+                            <tr>
+                                <th>Artículo</th>
+                                <th class="text-center">Tipo</th>
+                                <th class="text-center">Cant.</th>
+                                <th class="text-right">P.U.</th>
+                                <th class="text-right">Subtotal</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="d : ${v.detalles}">
+                                <td th:text="${d.nombre}"></td>
+                                <td class="text-center" th:text="${d.tipo}"></td>
+                                <td class="text-center" th:text="${d.cantidad}"></td>
+                                <td class="text-right nowrap" th:text="'$' + ${d.precio}"></td>
+                                <td class="text-right nowrap" th:text="'$' + ${d.subtotal}"></td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </td>
+                </tr>
+            </th:block>
+            <tr th:if="${#lists.isEmpty(ventas)}">
+                <td colspan="5" class="text-center">No se registraron ventas en este periodo.</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="footer">
+        Generado automáticamente por el Sistema POS Papelería.<br>
+        Por favor no respondas a este correo.
+    </div>
+</div>
+</body>
+</html>
