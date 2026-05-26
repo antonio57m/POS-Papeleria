@@ -203,6 +203,22 @@
                             </div>
                         </div>
                     </div>
+
+                    <div class="row mb-4" id="tarjetasFinancieras" style="display: none;">
+                        <div class="col-md-6">
+                            <div class="card premium-card p-3 border-0 shadow-sm text-center" style="border-radius: 12px; background-color: rgba(74, 91, 96, 0.05);">
+                                <h6 class="text-muted fw-bold mb-1">Ingreso Bruto (Total)</h6>
+                                <h3 class="fw-bold mb-0" style="color: var(--brand-shadow);" id="uiTotalVendido">$0.00</h3>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card premium-card p-3 border-0 shadow-sm text-center" style="border-radius: 12px; background-color: rgba(92, 184, 92, 0.05);">
+                                <h6 class="text-muted fw-bold mb-1">Ganancia Neta Real (Utilidad)</h6>
+                                <h3 class="fw-bold mb-0" style="color: #5cb85c;" id="uiGananciaNeta">$0.00</h3>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="table-responsive table-premium">
                         <table class="table mb-0">
                             <thead>
@@ -228,13 +244,28 @@
                             <div class="card premium-card p-5 border-0 shadow-sm" style="border-radius: 12px;">
                                 <div class="text-center mb-4">
                                     <i class="bi bi-envelope-at-fill fs-1" style="color: var(--brand-stone);"></i>
-                                    <h5 class="fw-bold mt-2" style="color: var(--brand-shadow);">Destinatarios del Reporte Semanal</h5>
-                                    <p class="text-muted small">El sistema enviará el resumen financiero a estas direcciones de correo todos los viernes al cerrar la caja.</p>
+                                    <h5 class="fw-bold mt-2" style="color: var(--brand-shadow);">Automatización de Reportes</h5>
+                                    <p class="text-muted small">Configura quién y cuándo recibirá los resúmenes financieros.</p>
+                                </div>
+
+                                <div class="mb-4">
+                                    <label class="label-premium">Día de envío del Reporte Semanal</label>
+                                    <select class="form-select input-premium" id="inputDiaReporte">
+                                        <option value="MONDAY">Lunes</option>
+                                        <option value="TUESDAY">Martes</option>
+                                        <option value="WEDNESDAY">Miércoles</option>
+                                        <option value="THURSDAY">Jueves</option>
+                                        <option value="FRIDAY" selected>Viernes</option>
+                                        <option value="SATURDAY">Sábado</option>
+                                        <option value="SUNDAY">Domingo</option>
+                                    </select>
+                                    <small class="text-muted" style="font-size: 0.75rem;">El sistema calculará las ventas de los últimos 7 días con base en el día seleccionado.</small>
                                 </div>
 
                                 <div class="mb-4">
                                     <label class="label-premium">Correos Electrónicos (Separados por coma)</label>
                                     <textarea class="form-control input-premium" id="inputCorreosReporte" rows="3" placeholder="ejemplo1@gmail.com, contador@empresa.com"></textarea>
+                                    <small class="text-muted" style="font-size: 0.75rem;">Nota: Los reportes diarios de caja y alertas de stock se enviarán a estos mismos correos todos los días al cerrar turno.</small>
                                 </div>
 
                                 <button class="btn btn-premium w-100 py-3 fw-bold" onclick="guardarConfiguracionCorreos()">
@@ -365,6 +396,7 @@
     }
 
     // --- LÓGICA DE DESGLOSE MANTENIDA ---
+    // --- LÓGICA DE DESGLOSE MANTENIDA Y MEJORADA ---
     function generarReporteVentas() {
         const inicio = document.getElementById('filtroFechaInicio').value;
         const fin = document.getElementById('filtroFechaFin').value;
@@ -373,14 +405,25 @@
 
         fetch(`/api/ventas/reporte/fechas?inicio=${inicio}:00&fin=${fin}:00`)
             .then(res => res.json())
-            .then(ventas => {
+            .then(data => {
                 const tbody = document.getElementById('tablaMasterVentas');
                 tbody.innerHTML = '';
+
+                const ventas = data.ventas; // Ahora extraemos la lista desde el nuevo objeto
+
                 if(ventas.length === 0) {
+                    document.getElementById('tarjetasFinancieras').style.display = 'none';
                     tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-4">No se registraron ventas.</td></tr>`;
                     return;
                 }
+
+                // Pintamos las tarjetas financieras
+                document.getElementById('tarjetasFinancieras').style.display = 'flex';
+                document.getElementById('uiTotalVendido').innerText = '$' + data.totalVendido.toFixed(2);
+                document.getElementById('uiGananciaNeta').innerText = '$' + data.gananciaNeta.toFixed(2);
+
                 ventas.sort((a, b) => new Date(b.fechaHora) - new Date(a.fechaHora));
+
                 ventas.forEach(v => {
                     const dateFmt = new Date(v.fechaHora).toLocaleString('es-MX');
                     const badgeEst = v.estado === 'COMPLETADA' ? 'bg-success' : 'bg-warning text-dark';
@@ -389,7 +432,7 @@
                             <td><button class="btn btn-sm btn-light py-0 px-2 border" onclick="toggleDetallesVenta(${v.id})"><i class="bi bi-chevron-down" id="icon-toggle-${v.id}"></i></button></td>
                             <td class="fw-bold text-muted">V-${v.id}</td>
                             <td>${dateFmt}</td>
-                            <td class="small fw-bold text-secondary">${v.metodoPago}</td>
+                            <td class="small fw-bold text-secondary">${v.metodoPago.replace('_', ' ')}</td>
                             <td class="text-center"><span class="badge ${badgeEst}">${v.estado.replace('_', ' ')}</span></td>
                             <td class="text-end fw-bold text-dark">$${v.total.toFixed(2)}</td>
                         </tr>
@@ -427,31 +470,35 @@
     // ==========================================
     // NUEVA LÓGICA: CONFIGURACIÓN DE CORREOS
     // ==========================================
+    // ==========================================
+    // NUEVA LÓGICA: CONFIGURACIÓN DE REPORTES
+    // ==========================================
     function cargarConfiguracionCorreos() {
-        fetch('/api/configuracion/correos')
+        // Actualizamos la ruta al nuevo endpoint
+        fetch('/api/configuracion/reportes')
             .then(res => res.json())
             .then(data => {
                 document.getElementById('inputCorreosReporte').value = data.correos || '';
+                if(data.dia) {
+                    document.getElementById('inputDiaReporte').value = data.dia;
+                }
             });
     }
 
     function guardarConfiguracionCorreos() {
         const inputCrudo = document.getElementById('inputCorreosReporte').value;
+        const diaSeleccionado = document.getElementById('inputDiaReporte').value;
 
         if (inputCrudo.trim() === '') {
             alert('Por favor escribe al menos un correo electrónico.');
             return;
         }
 
-        // 1. DIVIDE Y VENCERÁS: Separar por comas, quitar espacios extra y pasar a minúsculas
         let arrayCorreos = inputCrudo.split(',')
             .map(correo => correo.trim().toLowerCase())
             .filter(correo => correo !== '');
 
-        // 2. Destruir Duplicados: Convertimos el Array a un 'Set' (conjunto único) y de vuelta a Array
         let correosUnicos = [...new Set(arrayCorreos)];
-
-        // 3. QA Estricto: Validar que tengan formato de correo electrónico real
         const regexCorreo = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         let correosInvalidos = correosUnicos.filter(correo => !regexCorreo.test(correo));
 
@@ -460,26 +507,23 @@
             return;
         }
 
-        // 4. Volvemos a unir los correos válidos y únicos separados por coma para la BD
         const correosFinales = correosUnicos.join(',');
 
-        // 5. Enviar al Backend
-        fetch('/api/configuracion/correos', {
+        // Enviamos correos y el día seleccionado
+        fetch('/api/configuracion/reportes', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ correos: correosFinales })
+            body: JSON.stringify({
+                correos: correosFinales,
+                dia: diaSeleccionado
+            })
         })
             .then(res => {
                 if(res.ok) {
-                    alert('¡Configuración guardada exitosamente y sin duplicados!');
-
-                    // Limpiamos el espacio temporalmente (como solicitaste)
-                    document.getElementById('inputCorreosReporte').value = '';
-
-                    // Y volvemos a cargar de la BD para que el usuario vea su lista limpia y formateada
-                    cargarConfiguracionCorreos();
+                    alert('¡Configuración de reportes guardada exitosamente!');
+                    cargarConfiguracionCorreos(); // Recargamos para visualizar
                 } else {
-                    alert('Hubo un error al guardar los correos.');
+                    alert('Hubo un error al guardar la configuración.');
                 }
             });
     }

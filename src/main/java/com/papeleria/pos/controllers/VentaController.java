@@ -106,6 +106,7 @@ public class VentaController {
                     respuestaFinal.put("cajero", venta.getUsuario().getUsername());
                     respuestaFinal.put("total", venta.getTotal());
                     respuestaFinal.put("estado", venta.getEstado().name());
+                    respuestaFinal.put("metodoPago", venta.getMetodoPago().name());
                     respuestaFinal.put("detalles", detallesDTO);
 
                     return ResponseEntity.ok(respuestaFinal);
@@ -114,10 +115,22 @@ public class VentaController {
     }
 
     @GetMapping("/reporte/fechas")
-    public ResponseEntity<List<Venta>> obtenerVentasPorFechas(
+    public ResponseEntity<Map<String, Object>> obtenerVentasPorFechas(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime inicio,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fin) {
-        return ResponseEntity.ok(ventaService.obtenerVentasPorRango(inicio, fin));
+
+        List<Venta> ventas = ventaService.obtenerVentasPorRango(inicio, fin);
+
+        // Llamamos al nuevo motor financiero
+        Map<String, BigDecimal> finanzas = ventaService.calcularTotalesYGanancias(ventas);
+
+        // Empaquetamos la respuesta
+        Map<String, Object> response = new HashMap<>();
+        response.put("ventas", ventas);
+        response.put("totalVendido", finanzas.get("totalVendido"));
+        response.put("gananciaNeta", finanzas.get("gananciaNeta"));
+
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/reporte/metodo-pago")

@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -124,4 +125,50 @@ public class VentaService {
 
         return ventaGuardada;
     }
+    // ... tu método procesarVentaCompleta está arriba ...
+
+    // ==========================================
+    // NUEVO: MOTOR FINANCIERO DE UTILIDADES
+    // ==========================================
+    public Map<String, BigDecimal> calcularTotalesYGanancias(List<Venta> ventas) {
+        BigDecimal totalVendido = BigDecimal.ZERO;
+        BigDecimal gananciaNeta = BigDecimal.ZERO;
+
+        for (Venta v : ventas) {
+            // Ignoramos ventas fallidas o canceladas por seguridad
+            if (v.getEstado() != null && v.getEstado().name().equals("CANCELADA")) {
+                continue;
+            }
+
+            totalVendido = totalVendido.add(v.getTotal() != null ? v.getTotal() : BigDecimal.ZERO);
+
+            List<DetalleVenta> detalles = detalleVentaService.obtenerDetallesPorVenta(v);
+            for (DetalleVenta d : detalles) {
+                if (d.getTipoItem() == TipoItem.PRODUCTO) {
+                    BigDecimal precioCompra = BigDecimal.ZERO;
+
+                    // Buscamos el costo original del producto en el catálogo
+                    Optional<Producto> optProd = productoService.buscarPorId(d.getIdItem());
+                    if (optProd.isPresent() && optProd.get().getPrecioCompra() != null) {
+                        precioCompra = optProd.get().getPrecioCompra();
+                    }
+
+                    // Fórmula: Ganancia = (PrecioVenta - PrecioCompra) * Cantidad
+                    BigDecimal gananciaUnitaria = d.getPrecioUnitario().subtract(precioCompra);
+                    BigDecimal gananciaTotalItem = gananciaUnitaria.multiply(d.getCantidad());
+                    gananciaNeta = gananciaNeta.add(gananciaTotalItem);
+
+                } else if (d.getTipoItem() == TipoItem.SERVICIO) {
+                    // Regla de Negocio: Los servicios representan 100% de ganancia neta
+                    gananciaNeta = gananciaNeta.add(d.getSubtotal());
+                }
+            }
+        }
+
+        return Map.of(
+                "totalVendido", totalVendido,
+                "gananciaNeta", gananciaNeta
+        );
+    }
+
 }

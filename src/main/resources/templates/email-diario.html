@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Corte Diario de Caja</title>
+    <style>
+        /* ESTILOS BASE Y RESPONSIVOS COMPARTIDOS */
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f7f8; color: #333; margin: 0; padding: 20px; -webkit-font-smoothing: antialiased; }
+        .container { max-width: 800px; margin: auto; background: #ffffff; padding: 30px; border-radius: 8px; border: 1px solid #e0e0e0; }
+        h1 { color: #4A5B60; text-align: center; margin-top: 0; font-size: 24px;}
+        h2 { color: #2A3132; border-bottom: 2px solid #4A5B60; padding-bottom: 8px; margin-top: 30px; font-size: 18px; }
+
+        .table-wrapper { width: 100%; overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14px; }
+        th { background-color: #4A5B60; color: #ffffff; padding: 12px 10px; text-align: left; }
+        td { padding: 12px 10px; border-bottom: 1px solid #eeeeee; }
+
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .nowrap { white-space: nowrap; }
+
+        /* Cajas de Alerta de Auditoría */
+        .alert-box { background-color: #fff3cd; color: #856404; padding: 15px; border-radius: 5px; border-left: 5px solid #ffeeba; margin-bottom: 20px; font-weight: bold; }
+        .success-box { background-color: #d4edda; color: #155724; padding: 15px; border-radius: 5px; border-left: 5px solid #c3e6cb; margin-bottom: 20px; font-weight: bold; }
+        .danger-box { background-color: #f8d7da; color: #721c24; padding: 15px; border-radius: 5px; border-left: 5px solid #f5c6cb; margin-bottom: 20px; font-weight: bold; }
+
+        .footer { font-size: 12px; text-align: center; color: #777; margin-top: 40px; border-top: 1px solid #eee; padding-top: 20px; }
+
+        @media only screen and (max-width: 600px) {
+            body { padding: 10px !important; }
+            .container { padding: 15px !important; }
+            h1 { font-size: 20px !important; }
+            h2 { font-size: 16px !important; }
+            table { font-size: 11px !important; }
+            th, td { padding: 8px 4px !important; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Corte de Caja Diario</h1>
+    <p class="text-center" style="color: #666; margin-bottom: 30px;">
+        Cierre realizado el: <strong th:text="${#temporals.format(corte.fechaCierre, 'dd/MM/yyyy HH:mm')}"></strong>
+    </p>
+
+    <div style="background-color: #2A3132; color: #ffffff; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+        <div style="display: flex; justify-content: space-between;">
+            <div style="text-align: center; width: 50%;">
+                <div style="font-size: 12px; text-transform: uppercase; opacity: 0.8;">Total Vendido</div>
+                <div style="font-size: 22px; font-weight: bold;" th:text="'$' + ${#numbers.formatDecimal(totalVendido, 1, 2)}"></div>
+            </div>
+            <div style="text-align: center; width: 50%; border-left: 1px solid #4A5B60;">
+                <div style="font-size: 12px; text-transform: uppercase; opacity: 0.8;">Ganancia Neta</div>
+                <div style="font-size: 22px; font-weight: bold; color: #5cb85c;" th:text="'$' + ${#numbers.formatDecimal(gananciaNeta, 1, 2)}"></div>
+            </div>
+        </div>
+    </div>
+
+    <div th:if="${corte.diferencia == 0}" class="success-box text-center">
+        ✅ ¡El corte de caja fue EXACTO! El cajero entregó el efectivo correcto.
+    </div>
+    <div th:if="${corte.diferencia < 0}" class="danger-box text-center">
+        ⚠️ ATENCIÓN: El sistema detectó un FALTANTE de efectivo en este turno.
+    </div>
+    <div th:if="${corte.diferencia > 0}" class="alert-box text-center">
+        ⚠️ ATENCIÓN: Se reportó un SOBRANTE de efectivo en la caja.
+    </div>
+
+    <h2>1. Auditoría del Turno</h2>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+            <tr>
+                <th>Cajero</th>
+                <th class="text-right">Esperado (Sistema)</th>
+                <th class="text-right">Declarado (Físico)</th>
+                <th class="text-right">Diferencia</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td th:text="${corte.usuario.username}"></td>
+                <td class="text-right nowrap" th:text="'$' + ${corte.montoEsperado}"></td>
+                <td class="text-right nowrap" th:text="'$' + ${corte.montoDeclarado}"></td>
+                <td class="text-right nowrap">
+                    <span th:if="${corte.diferencia < 0}" style="color: #d9534f; font-weight: bold;" th:text="'-$' + ${corte.diferencia * -1}"></span>
+                    <span th:if="${corte.diferencia > 0}" style="color: #f0ad4e; font-weight: bold;" th:text="'+$' + ${corte.diferencia}"></span>
+                    <span th:if="${corte.diferencia == 0}" style="color: #5cb85c; font-weight: bold;">$0.00</span>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h2>2. Alertas de Inventario Crítico</h2>
+
+    <div th:if="${#lists.isEmpty(alertasStock)}" style="color: #5cb85c; font-weight: bold; text-align: center; margin-top: 15px; border: 1px dashed #5cb85c; padding: 15px; border-radius: 8px;">
+        ✅ Excelente: Ningún producto físico ha caído por debajo de su stock mínimo de seguridad.
+    </div>
+
+    <div th:if="${not #lists.isEmpty(alertasStock)}">
+        <p style="font-size: 13px; color: #721c24; font-weight: bold;">La siguiente mercancía requiere abastecimiento a la brevedad:</p>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Producto</th>
+                    <th class="text-center">Stock Actual</th>
+                    <th class="text-center">Mínimo Permitido</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="p : ${alertasStock}">
+                    <td th:text="${p.codigoBarras ?: 'S/C'}"></td>
+                    <td th:text="${p.nombre}"></td>
+                    <td class="text-center fw-bold" style="color: #d9534f;" th:text="${p.stock}"></td>
+                    <td class="text-center text-muted" th:text="${p.stockMinimo}"></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="footer">
+        Generado automáticamente por el Sistema<br>
+        Por favor no respondas a este correo.
+    </div>
+</div>
+</body>
+</html>

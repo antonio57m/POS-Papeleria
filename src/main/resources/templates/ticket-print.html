@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Ticket de Venta</title>
+    <style>
+        /* CSS ESTRICTO PARA ZJIANG 5890U (ZJ-58) - ALINEACIÓN IZQUIERDA */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: 900 !important;
+        }
+
+        body {
+            width: 44mm; /* Ancho máximo estricto */
+            margin: 0; /* ANCLADO A LA IZQUIERDA, quitamos el auto-centrado */
+            padding: 0 4mm 0 0; /* Margen derecho forzado para evitar la zona muerta */
+            color: #000;
+            background: #fff;
+            font-size: 11px;
+            overflow: hidden;
+        }
+
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .text-left { text-align: left; }
+
+        .divider { border-top: 1px dashed #000; margin: 5px 0; width: 100%; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            word-wrap: break-word;
+            margin-bottom: 3px;
+        }
+
+        /* Ajuste de columnas: 65% para descripción, 35% para importe */
+        th, td { padding: 1px 0; vertical-align: top; font-size: 10px; }
+        th:first-child, td:first-child { width: 65%; }
+        th:last-child, td:last-child { width: 35%; }
+
+        .ticket-header { margin-bottom: 5px; padding-top: 2px; width: 100%; }
+        .ticket-header h2 { font-size: 14px; margin-bottom: 2px; text-transform: uppercase; }
+        .ticket-header p { font-size: 10px; line-height: 1.1; }
+
+        .ticket-info { margin-bottom: 5px; font-size: 10px; width: 100%; }
+
+        @media print {
+            @page {
+                margin: 0;
+                /* Se delega el tamaño al driver de Windows */
+            }
+            body {
+                width: 44mm;
+                margin: 0;
+                padding-right: 4mm;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="text-center ticket-header">
+    <h2>PAPELERÍA LA COLONIAL</h2>
+    <p>CLAVEL, TLÁHUAC, 13400</p>
+    <p>CIUDAD DE MÉXICO, CDMX</p>
+</div>
+
+<div class="divider"></div>
+
+<div class="ticket-info">
+    <table style="font-size: 9px;">
+        <tr>
+            <td class="text-left fw-bold" style="width: 28%;">FOLIO:</td>
+            <td class="text-left" style="width: 72%;">#<span id="tk-folio"></span></td>
+        </tr>
+        <tr>
+            <td class="text-left fw-bold">FECHA:</td>
+            <td class="text-left"><span id="tk-fecha"></span></td>
+        </tr>
+        <tr>
+            <td class="text-left fw-bold">CAJERO:</td>
+            <td class="text-left"><span id="tk-cajero"></span></td>
+        </tr>
+    </table>
+</div>
+
+<div class="divider"></div>
+
+<table>
+    <thead>
+    <tr style="border-bottom: 1px solid #000;">
+        <th class="text-left" style="width: 60%; font-size: 10px;">CANT/DESC</th>
+        <th class="text-right" style="width: 40%; font-size: 10px;">IMPORTE</th>
+    </tr>
+    </thead>
+    <tbody id="tk-detalles">
+    </tbody>
+</table>
+
+<div class="divider"></div>
+
+<table>
+    <tr>
+        <td class="text-left" style="width: 60%; font-size: 10px;">ARTÍCULOS:</td>
+        <td class="text-right fw-bold" style="width: 40%; font-size: 10px;" id="tk-articulos">0</td>
+    </tr>
+    <tr>
+        <td class="text-left" style="font-size: 10px;">SUBTOTAL:</td>
+        <td class="text-right" style="font-size: 10px;" id="tk-subtotal">$0.00</td>
+    </tr>
+    <tr style="height: 5px;"><td colspan="2"></td></tr>
+    <tr>
+        <td class="text-left" style="font-size: 14px; text-transform: uppercase;">TOTAL:</td>
+        <td class="text-right" style="font-size: 14px;" id="tk-total">$0.00</td>
+    </tr>
+    <tr style="height: 3px;"><td colspan="2"></td></tr>
+    <tr>
+        <td class="text-left" style="font-size: 10px;">FORMA PAGO:</td>
+        <td class="text-right" style="font-size: 10px;" id="tk-metodo"></td>
+    </tr>
+</table>
+
+<div class="divider"></div>
+
+<div class="text-center" style="margin-top: 5px; margin-bottom: 5px;">
+    <p style="font-size: 10px;">PARA CAMBIOS Y GARANTÍAS PRESENTAR TICKET EN BUEN ESTADO.</p>
+    <p style="font-size: 11px; margin-top: 5px;">¡GRACIAS POR SU PREFERENCIA!</p>
+    <br><br>
+</div>
+
+<script th:inline="javascript">
+    const idVenta = /*[[${idVenta}]]*/ 0;
+
+    fetch('/api/ventas/' + idVenta)
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById('tk-folio').innerText = data.idTicket;
+            // Formato de fecha corto MX
+            document.getElementById('tk-fecha').innerText = new Date(data.fecha).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
+            document.getElementById('tk-cajero').innerText = data.cajero;
+            document.getElementById('tk-total').innerText = '$' + data.total.toFixed(2);
+
+            // Reemplazar guiones bajos por espacios para limpieza visual
+            document.getElementById('tk-metodo').innerText = (data.metodoPago || data.estado).replace('_', ' ');
+
+            const tbody = document.getElementById('tk-detalles');
+            let totalArticulos = 0;
+            let subtotalAcumulado = 0;
+
+            data.detalles.forEach(d => {
+                totalArticulos += d.cantidadOriginal;
+                subtotalAcumulado += d.subtotal;
+
+                tbody.innerHTML += `
+                        <tr>
+                            <td colspan="2" class="text-left" style="font-size: 10px; padding-top: 3px;">${d.cantidadOriginal}x ${d.nombre}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-left" style="padding-left: 10px; font-size: 9px; color: #333;">$${d.precioUnitario.toFixed(2)} c/u</td>
+                            <td class="text-right" style="font-size: 10px;">$${d.subtotal.toFixed(2)}</td>
+                        </tr>
+                    `;
+            });
+
+            document.getElementById('tk-articulos').innerText = totalArticulos;
+            // En sistema sin IVA desglosado, subtotal == total
+            document.getElementById('tk-subtotal').innerText = '$' + subtotalAcumulado.toFixed(2);
+
+            // Magia Front-End: Lanzar impresión automáticamente tras renderizado
+            setTimeout(() => {
+                window.print();
+            }, 300);
+        })
+        .catch(err => {
+            document.body.innerHTML = "<h3 style='text-align:center; margin-top:20px;'>Error al cargar ticket</h3>";
+        });
+</script>
+</body>
+</html>

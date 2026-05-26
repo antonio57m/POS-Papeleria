@@ -622,7 +622,10 @@
                 modalCobroUI.hide();
                 carrito = [];
                 renderizarCarrito();
-                alert(`¡Venta cobrada con éxito!\nFolio de Ticket: #${ventaGenerada.id}`);
+
+                // Magia: En lugar de un alert, abrimos el ticket en una ventana emergente pequeña
+                window.open(`/ticket/${ventaGenerada.id}`, '_blank', 'width=400,height=600');
+
                 document.getElementById('btnConfirmarPago').disabled = false;
             })
             .catch(err => {

@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 
 import java.security.Principal;
 
@@ -110,4 +111,12 @@ public class WebController {
         model.addAttribute("activePage", "reportes");
         return "reportes";
     }
+
+    @GetMapping("/ticket/{id}")
+    public String mostrarTicketTermico(@PathVariable Integer id, Model model) {
+        // Le pasamos el ID del ticket al HTML para que sepa qué datos buscar
+        model.addAttribute("idVenta", id);
+        return "ticket-print";
+    }
+
 }

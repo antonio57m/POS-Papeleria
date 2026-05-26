@@ -14,14 +14,22 @@ public class ConfiguracionController {
 
     private final ConfiguracionService configuracionService;
 
-    @GetMapping("/correos")
-    public ResponseEntity<Map<String, String>> obtenerCorreos() {
-        return ResponseEntity.ok(Map.of("correos", configuracionService.obtenerCorreosReporte()));
+    // Actualizamos el endpoint para devolver ambos datos
+    @GetMapping("/reportes")
+    public ResponseEntity<Map<String, String>> obtenerConfiguracion() {
+        return ResponseEntity.ok(Map.of(
+                "correos", configuracionService.obtenerCorreosReporte(),
+                "dia", configuracionService.obtenerDiaReporteSemanal()
+        ));
     }
 
-    @PutMapping("/correos")
-    public ResponseEntity<?> actualizarCorreos(@RequestBody Map<String, String> request) {
-        configuracionService.guardarCorreosReporte(request.get("correos"));
+    // Actualizamos para recibir ambos datos
+    @PutMapping("/reportes")
+    public ResponseEntity<?> actualizarConfiguracion(@RequestBody Map<String, String> request) {
+        configuracionService.guardarConfiguracionReportes(
+                request.get("correos"),
+                request.get("dia")
+        );
         return ResponseEntity.ok().build();
     }
 }

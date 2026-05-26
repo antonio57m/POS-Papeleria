@@ -57,6 +57,19 @@
         Periodo: <strong th:text="${#temporals.format(inicio, 'dd/MM/yyyy')}"></strong> al <strong th:text="${#temporals.format(fin, 'dd/MM/yyyy')}"></strong>
     </p>
 
+    <div style="background-color: #2A3132; color: #ffffff; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+        <div style="display: flex; justify-content: space-between;">
+            <div style="text-align: center; width: 50%;">
+                <div style="font-size: 12px; text-transform: uppercase; opacity: 0.8;">Total Vendido</div>
+                <div style="font-size: 22px; font-weight: bold;" th:text="'$' + ${#numbers.formatDecimal(totalVendido, 1, 2)}"></div>
+            </div>
+            <div style="text-align: center; width: 50%; border-left: 1px solid #4A5B60;">
+                <div style="font-size: 12px; text-transform: uppercase; opacity: 0.8;">Ganancia Neta</div>
+                <div style="font-size: 22px; font-weight: bold; color: #5cb85c;" th:text="'$' + ${#numbers.formatDecimal(gananciaNeta, 1, 2)}"></div>
+            </div>
+        </div>
+    </div>
+
     <h2>1. Cortes de Caja Realizados</h2>
     <div class="table-wrapper">
         <table>
@@ -142,7 +155,7 @@
     </div>
 
     <div class="footer">
-        Generado automáticamente por el Sistema POS Papelería.<br>
+        Generado automáticamente por el Sistema<br>
         Por favor no respondas a este correo.
     </div>
 </div>

@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -63,22 +64,35 @@ public class CorteCajaService {
 
         CorteCaja corteGuardado = corteCajaRepository.save(corte);
 
-        // --- MAGIA AUTOMATIZADA: DISPARADOR DEL VIERNES LEYENDO LA BD ---
-        // if (corteGuardado.getFechaCierre().getDayOfWeek() == DayOfWeek.FRIDAY) {
+        // --- EL CEREBRO DE LAS NOTIFICACIONES ---
         String correosGuardados = configuracionService.obtenerCorreosReporte();
 
         if (!correosGuardados.isEmpty()) {
             String[] destinatarios = correosGuardados.split(",");
 
-            // Calculamos desde el Domingo a las 00:00 hasta este preciso momento
-            LocalDateTime finSemana = corteGuardado.getFechaCierre();
-            LocalDateTime inicioSemana = finSemana.with(java.time.temporal.TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY))
-                    .withHour(0).withMinute(0).withSecond(0);
+            // TRUCO SENIOR: Forzamos la inicialización del nombre del usuario mientras la conexión
+            // a la base de datos sigue abierta, para evitar el LazyInitializationException en los correos.
+            corteGuardado.getUsuario().getUsername();
 
-            // Llamamos a la nueva función HTML
-            emailService.enviarReporteSemanalHtml(destinatarios, inicioSemana, finSemana);
+            // 1. ENVÍO DIARIO (Se dispara SIEMPRE que se cierra una caja e incluye el Stock)
+            emailService.enviarReporteDiarioHtml(destinatarios, corteGuardado);
+
+            // 2. ENVÍO SEMANAL DINÁMICO
+            String diaConfigurado = configuracionService.obtenerDiaReporteSemanal(); // Ej. "FRIDAY"
+            DayOfWeek diaActual = corteGuardado.getFechaCierre().getDayOfWeek();
+
+            // Si hoy es el día que el cliente eligió en la configuración...
+            if (diaActual.name().equalsIgnoreCase(diaConfigurado)) {
+
+                // Calculamos desde hace 6 días a las 00:00:00 hasta este preciso momento
+                LocalDateTime finSemana = corteGuardado.getFechaCierre();
+                LocalDateTime inicioSemana = finSemana.minusDays(6).with(LocalTime.MIN);
+
+                // Disparamos el reporte pesado
+                emailService.enviarReporteSemanalHtml(destinatarios, inicioSemana, finSemana);
+            }
         }
-        // }
+
         return corteGuardado;
     }
 
