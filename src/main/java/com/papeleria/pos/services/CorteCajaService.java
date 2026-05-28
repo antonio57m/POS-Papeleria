@@ -27,7 +27,10 @@ public class CorteCajaService {
     @Autowired
     private ConfiguracionService configuracionService;
 
+    @Autowired private AuditoriaLogService auditoriaLogService;
+
     // 1. Apertura de Turno (Al iniciar el día o cambio de turno)
+// 1. Apertura de Turno (Al iniciar el día o cambio de turno)
     @Transactional
     public CorteCaja abrirCaja(Usuario cajero) {
         // Regla de Negocio: Un cajero no puede abrir dos cajas al mismo tiempo.
@@ -38,9 +41,13 @@ public class CorteCajaService {
 
         CorteCaja nuevoCorte = new CorteCaja();
         nuevoCorte.setUsuario(cajero);
-        // fechaApertura se genera automáticamente en MariaDB/Java por @CreationTimestamp
 
-        return corteCajaRepository.save(nuevoCorte);
+        CorteCaja corteGuardado = corteCajaRepository.save(nuevoCorte);
+
+        // --- ESPÍA SILENCIOSO: APERTURA DE CAJA ---
+        auditoriaLogService.registrarEventoSilencioso("APERTURA_CAJA", "El cajero abrió un nuevo turno de caja.");
+
+        return corteGuardado;
     }
 
     // 2. El Corte a Ciegas (Al finalizar el turno)
@@ -56,6 +63,10 @@ public class CorteCajaService {
 
         // Matemáticas del corte
         BigDecimal diferencia = montoDeclarado.subtract(montoEsperado);
+
+        if (diferencia.compareTo(BigDecimal.ZERO) != 0) {
+            auditoriaLogService.registrarEventoSilencioso("CIERRE_CAJA_DESCUADRE", "El cajero cerró con una diferencia de: $" + diferencia);
+        }
 
         corte.setMontoEsperado(montoEsperado);
         corte.setMontoDeclarado(montoDeclarado);

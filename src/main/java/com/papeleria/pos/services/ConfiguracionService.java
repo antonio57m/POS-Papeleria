@@ -3,6 +3,7 @@ package com.papeleria.pos.services;
 import com.papeleria.pos.models.Configuracion;
 import com.papeleria.pos.repositories.ConfiguracionRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -11,6 +12,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class ConfiguracionService {
 
     private final ConfiguracionRepository configuracionRepository;
+    @Autowired
+    private AuditoriaLogService auditoriaLogService;
 
     public String obtenerCorreosReporte() {
         return configuracionRepository.findByClave("CORREOS_REPORTE")
@@ -38,5 +41,7 @@ public class ConfiguracionService {
                 .orElse(new Configuracion(null, "DIA_REPORTE_SEMANAL", "FRIDAY"));
         configDia.setValor(diaSemana);
         configuracionRepository.save(configDia);
+        // Al final de tu método guardarConfiguracionReportes, añade:
+        auditoriaLogService.registrarEventoSilencioso("CAMBIO_CONFIGURACION", "Se actualizaron los correos a: " + correos + " y el día de reporte a: " + diaSemana);
     }
 }

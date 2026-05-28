@@ -3,7 +3,10 @@ package com.papeleria.pos.services;
 import com.papeleria.pos.models.AuditoriaLog;
 import com.papeleria.pos.models.Usuario;
 import com.papeleria.pos.repositories.AuditoriaLogRepository;
+import com.papeleria.pos.repositories.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +20,9 @@ public class AuditoriaLogService {
     @Autowired
     private AuditoriaLogRepository auditoriaLogRepository;
 
+    @Autowired
+    private UsuarioRepository usuarioRepository;
+
     // 1. Registro de Evento (Alta prioridad)
     // Usamos Propagation.REQUIRES_NEW para que, si una venta falla y hace rollback,
     // el log de "Intento de Venta Fallido" SÍ se guarde en la base de datos de todos modos.
@@ -26,11 +32,24 @@ public class AuditoriaLogService {
         log.setUsuario(usuario);
         log.setAccion(accion);
         log.setDescripcion(descripcion);
-
-        // La fechaHora se asienta sola por el @CreationTimestamp de tu modelo
         auditoriaLogRepository.save(log);
     }
 
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void registrarEventoSilencioso(String accion, String descripcion) {
+        AuditoriaLog log = new AuditoriaLog();
+        log.setAccion(accion);
+        log.setDescripcion(descripcion);
+
+        // Extraemos quién hizo la petición desde Spring Security
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.isAuthenticated() && !auth.getPrincipal().equals("anonymousUser")) {
+            usuarioRepository.findByUsername(auth.getName()).ifPresent(log::setUsuario);
+        } // Si es null (ej. Login fallido), se queda en null gracias a tu ALTER TABLE
+
+        auditoriaLogRepository.save(log);
+    }
     // 2. Consultas de solo lectura para el Dashboard de Seguridad
 
     public List<AuditoriaLog> obtenerTodosLosLogs() {

@@ -17,6 +17,7 @@ public class ProductoService {
     // 1. Agrega esta inyección al inicio de la clase
     @Autowired
     private DetalleVentaService detalleVentaService;
+    @Autowired private AuditoriaLogService auditoriaLogService;
 
     public List<Producto> obtenerTodosLosProductos() {
         return productoRepository.findAll();
@@ -34,27 +35,24 @@ public class ProductoService {
         return productoRepository.findByCodigoBarras(codigoBarras);
     }
 
-    // Método Senior: Guardado con validaciones de negocio estrictas
+    // Reemplaza tu método guardarProducto por este:
     @Transactional
     public Producto guardarProducto(Producto producto) {
-        // 1. Evitar inventario negativo
-        if (producto.getStock() < 0) {
-            producto.setStock(0);
-        }
+        if (producto.getStock() < 0) producto.setStock(0);
+        if (producto.getPrecioVenta().compareTo(producto.getPrecioCompra()) < 0) throw new IllegalArgumentException("El precio de venta no puede ser menor al costo.");
 
-        // 2. Protección financiera: El margen de ganancia no puede ser negativo
-        if (producto.getPrecioVenta().compareTo(producto.getPrecioCompra()) < 0) {
-            throw new IllegalArgumentException("El precio de venta no puede ser menor al costo.");
-        }
-
-        // 3. Protección de duplicidad (Solo si es un producto nuevo)
-        if (producto.getId() == null) {
-            Optional<Producto> existente = productoRepository.findByCodigoBarras(producto.getCodigoBarras());
-            if (existente.isPresent()) {
-                throw new IllegalStateException("El código de barras ya está registrado en otro producto.");
+        if (producto.getId() != null) {
+            // Es una edición: Verificamos si cambió el precio o el stock manualmente
+            Producto viejo = productoRepository.findById(producto.getId()).orElse(producto);
+            if (viejo.getPrecioVenta().compareTo(producto.getPrecioVenta()) != 0) {
+                auditoriaLogService.registrarEventoSilencioso("MODIFICACION_PRECIO", "Cambió precio de $" + viejo.getPrecioVenta() + " a $" + producto.getPrecioVenta() + " en: " + producto.getNombre());
             }
+            if (!viejo.getStock().equals(producto.getStock())) {
+                auditoriaLogService.registrarEventoSilencioso("AJUSTE_STOCK_MANUAL", "Stock alterado de " + viejo.getStock() + " a " + producto.getStock() + " en: " + producto.getNombre());
+            }
+        } else {
+            if (productoRepository.findByCodigoBarras(producto.getCodigoBarras()).isPresent()) throw new IllegalStateException("Código duplicado.");
         }
-
         return productoRepository.save(producto);
     }
 
@@ -84,16 +82,27 @@ public class ProductoService {
                 .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado"));
 
         producto.setStock(producto.getStock() + cantidadRecibida);
+        auditoriaLogService.registrarEventoSilencioso("ABASTECIMIENTO_STOCK",
+                "Se agregaron " + cantidadRecibida + " unidades al producto: " + producto.getNombre());
         productoRepository.save(producto);
     }
 
     // 2. Modifica tu método eliminarProducto
+    @Transactional
     public void eliminarProducto(Integer id) {
         // Usamos el ENUM directamente importando com.papeleria.pos.enums.TipoItem;
         if (detalleVentaService.itemTieneHistorialDeVentas(com.papeleria.pos.enums.TipoItem.PRODUCTO, id)) {
             throw new IllegalStateException("No se puede eliminar el producto porque ya existe en el historial de ventas. Se sugiere desactivarlo.");
         }
+
+        // Buscamos cómo se llamaba el producto ANTES de destruirlo
+        Producto productoABorrar = productoRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado"));
+
         productoRepository.deleteById(id);
+
+        // --- ESPÍA SILENCIOSO: ELIMINACIÓN DE CATÁLOGO ---
+        auditoriaLogService.registrarEventoSilencioso("PRODUCTO_ELIMINADO", "Se eliminó definitivamente el producto: " + productoABorrar.getNombre());
     }
 
     public List<Producto> obtenerAlertasDeStock() {
@@ -108,6 +117,26 @@ public class ProductoService {
         // Si es null por algún registro viejo, asumimos que era true
         boolean estadoActual = producto.getActivo() != null ? producto.getActivo() : true;
         producto.setActivo(!estadoActual);
+        auditoriaLogService.registrarEventoSilencioso("ITEM_DESACTIVADO", "Estado cambiado a " + !estadoActual + " en: " + producto.getNombre());
+        productoRepository.save(producto);
+    }
+
+    @Transactional
+    public void registrarMerma(Integer idProducto, int cantidad, String motivo) {
+        if(cantidad <= 0) throw new IllegalArgumentException("La cantidad de merma debe ser mayor a 0");
+
+        Producto producto = productoRepository.findById(idProducto)
+                .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado"));
+
+        if (producto.getStock() < cantidad) {
+            throw new IllegalStateException("Stock insuficiente para reportar esta merma.");
+        }
+
+        producto.setStock(producto.getStock() - cantidad);
+
+        // ESPIONAJE SILENCIOSO
+        auditoriaLogService.registrarEventoSilencioso("AJUSTE_MERMA",
+                "Merma de " + cantidad + " unidades en '" + producto.getNombre() + "'. Motivo: " + motivo);
 
         productoRepository.save(producto);
     }

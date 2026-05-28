@@ -15,6 +15,8 @@ public class InsumoService {
 
     @Autowired
     private InsumoRepository insumoRepository;
+    @Autowired
+    private AuditoriaLogService auditoriaLogService;
 
     public List<Insumo> obtenerTodosLosInsumos() {
         return insumoRepository.findAll();
@@ -45,6 +47,8 @@ public class InsumoService {
 
         BigDecimal nuevoStock = insumo.getCantidadActual().add(cantidadComprada);
         insumo.setCantidadActual(nuevoStock);
+        auditoriaLogService.registrarEventoSilencioso("AJUSTE_STOCK_INSUMO",
+                "Se abastecieron " + cantidadComprada + " " + insumo.getUnidadMedida() + " de: " + insumo.getNombre());
         insumoRepository.save(insumo);
     }
 

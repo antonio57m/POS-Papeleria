@@ -30,6 +30,8 @@ public class DevolucionService {
     @Autowired
     private ProductoService productoService;
 
+    @Autowired private AuditoriaLogService auditoriaLogService;
+
     @Transactional
     public Devolucion procesarDevolucion(Integer idDetalle, Integer idCajero, BigDecimal cantidadADevolver, String motivo, Boolean esMerma) {
 
@@ -72,6 +74,8 @@ public class DevolucionService {
         Venta venta = detalle.getVenta();
         venta.setEstado(EstadoVenta.DEVUELTA_PARCIAL);
         ventaRepository.save(venta);
+
+        auditoriaLogService.registrarEventoSilencioso("DEVOLUCION_CREADA", "Se registró devolución de $" + montoAReintegrar + " por motivo: " + motivo);
 
         // 6. Impacto en el Inventario (Solo aplica para PRODUCTOS FÍSICOS, no servicios)
         if (detalle.getTipoItem() == TipoItem.PRODUCTO && !esMerma) {

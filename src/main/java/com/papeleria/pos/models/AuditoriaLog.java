@@ -23,10 +23,8 @@ public class AuditoriaLog {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    // EL CAMBIO MÁS CRÍTICO: FetchType.LAZY
-    @NotNull(message = "El registro de auditoría debe tener un usuario responsable")
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_usuario", nullable = false)
+    @JoinColumn(name = "id_usuario")
     private Usuario usuario;
 
     @NotBlank(message = "La acción auditada no puede estar vacía")

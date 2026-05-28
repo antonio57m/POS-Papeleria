@@ -321,14 +321,22 @@
                 data.forEach(log => {
                     const fechaFormat = new Date(log.fechaHora).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'medium' });
                     const badgeClass = log.accion.includes('ELIMINAR') || log.accion.includes('ERROR') ? 'bg-danger' : 'bg-secondary';
+                    let descripcionLimpia = log.descripcion
+                        ? log.descripcion
+                            .replace(/true/gi, 'Activado').replace(/false/gi, 'Desactivado')
+                            .replace(/MONDAY/g, 'Lunes').replace(/TUESDAY/g, 'Martes')
+                            .replace(/WEDNESDAY/g, 'Miércoles').replace(/THURSDAY/g, 'Jueves')
+                            .replace(/FRIDAY/g, 'Viernes').replace(/SATURDAY/g, 'Sábado')
+                            .replace(/SUNDAY/g, 'Domingo')
+                        : '-';
                     tbody.innerHTML += `
-                        <tr>
-                            <td class="small text-muted">${fechaFormat}</td>
-                            <td class="fw-bold text-dark"><i class="bi bi-person-badge me-1"></i>${log.usuario ? log.usuario.username : 'Sistema'}</td>
-                            <td><span class="badge ${badgeClass}">${log.accion}</span></td>
-                            <td class="small">${log.descripcion || '-'}</td>
-                        </tr>
-                    `;
+        <tr>
+            <td class="small text-muted">${fechaFormat}</td>
+            <td class="fw-bold text-dark"><i class="bi bi-person-badge me-1"></i>${log.usuario ? log.usuario.username : 'Sistema'}</td>
+            <td><span class="badge ${badgeClass}">${log.accion}</span></td>
+            <td class="small">${descripcionLimpia}</td>
+        </tr>
+    `;
                 });
             }).catch(err => console.error(err));
     }

@@ -19,6 +19,7 @@ public class UsuarioService {
     // Inyectamos el encriptador de contraseñas de Spring Security
     @Autowired
     private PasswordEncoder passwordEncoder;
+    @Autowired private AuditoriaLogService auditoriaLogService;
 
     public List<Usuario> obtenerTodosLosUsuarios() {
         return usuarioRepository.findAll();
@@ -34,16 +35,28 @@ public class UsuarioService {
 
     @Transactional
     public Usuario guardarUsuario(Usuario usuario) {
-        // Regla 1: Validar duplicidad en la base de datos (Solo si es un registro nuevo)
-        if (usuario.getId() == null && usuarioRepository.existsByUsername(usuario.getUsername())) {
-            throw new IllegalArgumentException("El nombre de usuario '" + usuario.getUsername() + "' ya está en uso.");
+        boolean esEdicion = usuario.getId() != null;
+
+        // Regla 1: Validar duplicidad en la base de datos (Tanto en creación como en edición)
+        if (!esEdicion) {
+            if (usuarioRepository.existsByUsername(usuario.getUsername())) {
+                throw new IllegalArgumentException("El nombre de usuario '" + usuario.getUsername() + "' ya está en uso.");
+            }
+        } else {
+            Optional<Usuario> existente = usuarioRepository.findByUsername(usuario.getUsername());
+            if (existente.isPresent() && !existente.get().getId().equals(usuario.getId())) {
+                throw new IllegalArgumentException("El nombre de usuario '" + usuario.getUsername() + "' ya está en uso por otro empleado.");
+            }
         }
 
         // Regla 2: Seguridad y Hashing de contraseñas
-        // Solo encriptamos si es un usuario nuevo, o si la contraseña no está ya encriptada (BCrypt empieza con $2a$)
-        if (usuario.getId() == null || (usuario.getPasswordHash() != null && !usuario.getPasswordHash().startsWith("$2a$"))) {
+        if (!esEdicion || (usuario.getPasswordHash() != null && !usuario.getPasswordHash().startsWith("$2a$"))) {
             String hashSeguro = passwordEncoder.encode(usuario.getPasswordHash());
             usuario.setPasswordHash(hashSeguro);
+        }
+
+        if (esEdicion) {
+            auditoriaLogService.registrarEventoSilencioso("USUARIO_MODIFICADO", "Se actualizó la cuenta del usuario: " + usuario.getUsername());
         }
 
         return usuarioRepository.save(usuario);

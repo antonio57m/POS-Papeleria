@@ -204,17 +204,28 @@
     const inputScanner = document.getElementById('posScanner');
     const resultadosDiv = document.getElementById('resultadosBusqueda');
 
+    // --- MAGIA SENIOR: FUNCION PARA ATRAPAR EL 401 GLOBALMENTE ---
+    function verificarSeguridad(res) {
+        if (res.status === 401 || (res.redirected && res.url.includes('/login'))) {
+            alert("⚠️ ALERTA DE SEGURIDAD\n\nTu cuenta ha sido desactivada o modificada por el administrador. Tu sesión se cerrará inmediatamente.");
+            window.location.replace('/login');
+            throw new Error("Sesión finalizada por seguridad");
+        }
+        return res;
+    }
+    // -------------------------------------------------------------
+
     document.addEventListener('DOMContentLoaded', function() {
 
         // 1. VALIDACIÓN EN TIEMPO REAL: ¿Tiene caja abierta?
         fetch(`/api/cortes-caja/activa/usuario/${idCajeroActual}`)
+            .then(verificarSeguridad) // Inyectado
             .then(res => {
                 if (!res.ok) {
                     alert("Aviso de Seguridad: Debes abrir un turno de caja para poder ingresar a la terminal de cobro.");
                     window.location.href = '/corte-caja';
                 } else {
-                    // Si sí tiene caja, encendemos el Punto de Venta
-                    cargarServiciosRapidos(); // <--- INYECTAMOS LA CARGA DE ATAJOS
+                    cargarServiciosRapidos();
 
                     modalPrecioVar = new bootstrap.Modal(document.getElementById('modalPrecioVariable'));
                     modalCobroUI = new bootstrap.Modal(document.getElementById('modalCobro'));
@@ -230,18 +241,20 @@
                     });
                 }
             })
-            .catch(err => console.error("Error validando caja:", err));
+            .catch(err => {
+                if(err.message !== "Sesión finalizada por seguridad") console.error("Error validando caja:", err);
+            });
     });
 
     // --- CARGAR SERVICIOS RÁPIDOS EN LA COLUMNA DERECHA ---
     function cargarServiciosRapidos() {
         fetch('/api/servicios')
+            .then(verificarSeguridad) // Inyectado
             .then(res => res.json())
             .then(servicios => {
                 const panel = document.getElementById('panelServiciosRapidos');
                 panel.innerHTML = '';
 
-                // CORRECCIÓN: Filtramos para ignorar los inactivos
                 const serviciosActivos = servicios.filter(s => s.activo !== false);
 
                 if (serviciosActivos.length === 0) {
@@ -260,7 +273,9 @@
                     `;
                 });
             })
-            .catch(err => console.error("Error al cargar servicios rápidos:", err));
+            .catch(err => {
+                if(err.message !== "Sesión finalizada por seguridad") console.error("Error al cargar servicios rápidos:", err);
+            });
     }
 
     // --- MOTOR DEL BUSCADOR EN TIEMPO REAL ---
@@ -277,6 +292,7 @@
             if (!isNaN(query) && query.length >= 4) {
                 // Buscador en tiempo real por Código de Barras
                 fetch(`/api/productos/codigo/${query}`)
+                    .then(verificarSeguridad) // Inyectado
                     .then(res => res.ok ? res.json() : null)
                     .then(prod => {
                         if (prod && prod.activo !== false) {
@@ -285,22 +301,25 @@
                             mostrarResultadosDropdown([], []);
                         }
                     })
-                    .catch(err => console.error("Error:", err));
+                    .catch(err => {
+                        if(err.message !== "Sesión finalizada por seguridad") console.error("Error:", err);
+                    });
 
             } else {
                 // Buscador en tiempo real por Texto (Nombres)
                 Promise.all([
-                    fetch(`/api/productos/buscar?nombre=${query}`).then(res => res.json()),
-                    fetch(`/api/servicios/buscar?nombre=${query}`).then(res => res.json())
+                    fetch(`/api/productos/buscar?nombre=${query}`).then(verificarSeguridad).then(res => res.json()),
+                    fetch(`/api/servicios/buscar?nombre=${query}`).then(verificarSeguridad).then(res => res.json())
                 ])
                     .then(([productos, servicios]) => {
-                        // CORRECCIÓN: Ahora también filtramos los servicios inactivos
                         const productosActivos = productos.filter(p => p.activo !== false);
                         const serviciosActivos = servicios.filter(s => s.activo !== false);
 
                         mostrarResultadosDropdown(productosActivos, serviciosActivos);
                     })
-                    .catch(err => console.error("Error múltiple:", err));
+                    .catch(err => {
+                        if(err.message !== "Sesión finalizada por seguridad") console.error("Error múltiple:", err);
+                    });
             }
         }, 300);
     }
@@ -356,6 +375,7 @@
             if (!isNaN(query) && query.length >= 5) {
                 // LECTOR DE CÓDIGO DE BARRAS
                 fetch(`/api/productos/codigo/${query}`)
+                    .then(verificarSeguridad) // Inyectado
                     .then(res => {
                         if(res.ok) return res.json();
                         throw new Error('Producto no encontrado en catálogo');
@@ -370,7 +390,9 @@
                         agregarProductoACarrito(prod);
                         limpiarBuscador();
                     })
-                    .catch(err => alert(err.message));
+                    .catch(err => {
+                        if(err.message !== "Sesión finalizada por seguridad") alert(err.message);
+                    });
             } else {
                 // Seleccionar desde menú desplegable
                 const primerItem = document.querySelector('.autocomplete-item');
@@ -533,12 +555,40 @@
     }
 
     function eliminarFila(index) {
+        // ESPIONAJE SILENCIOSO
+        const itemABorrar = carrito[index];
+        const cantidad = itemABorrar.cantidad;
+        const nombre = itemABorrar.descripcion;
+
+        fetch('/api/auditoria', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                idUsuario: idCajeroActual,
+                accion: 'ELIMINAR_DEL_CARRITO',
+                descripcion: `El cajero eliminó ${cantidad}x "${nombre}" del carrito antes de cobrar.`
+            })
+        }).catch(err => console.error("Error silencioso de auditoría:", err));
+
         carrito.splice(index, 1);
         renderizarCarrito();
     }
 
     function limpiarCarrito() {
         if(carrito.length > 0 && confirm('¿Deseas cancelar toda la cuenta actual?')) {
+            const totalCancealdo = carrito.reduce((sum, item) => sum + item.subtotal, 0);
+
+            // ESPÍA SILENCIOSO
+            fetch('/api/auditoria', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    idUsuario: idCajeroActual,
+                    accion: 'VENTA_CANCELADA_COMPLETA',
+                    descripcion: `El cajero canceló una venta entera de ${carrito.length} artículos por un total de $${totalCancealdo.toFixed(2)}.`
+                })
+            }).catch(err => console.error("Log error:", err));
+
             carrito = [];
             renderizarCarrito();
             inputScanner.focus();
@@ -615,6 +665,13 @@
             body: JSON.stringify(requestDTO)
         })
             .then(res => {
+                // --- NUEVO BLINDAJE FRONTEND PARA BOTÓN COBRAR ---
+                if (res.status === 401 || (res.redirected && res.url.includes('/login'))) {
+                    alert("⚠️ ALERTA DE SEGURIDAD\n\nTu cuenta ha sido desactivada o modificada por el administrador. Tu sesión se cerrará inmediatamente.");
+                    window.location.replace('/login');
+                    return Promise.reject("Sesión finalizada por seguridad");
+                }
+                // --------------------------------------------------
                 if(res.ok) return res.json();
                 return res.text().then(err => { throw new Error(err) });
             })
@@ -629,8 +686,10 @@
                 document.getElementById('btnConfirmarPago').disabled = false;
             })
             .catch(err => {
-                alert("Error al procesar venta en la BD:\n" + err.message);
-                document.getElementById('btnConfirmarPago').disabled = false;
+                if (err !== "Sesión finalizada por seguridad") {
+                    alert("Error al procesar venta en la BD:\n" + (err.message || err));
+                    document.getElementById('btnConfirmarPago').disabled = false;
+                }
             });
     }
 </script>

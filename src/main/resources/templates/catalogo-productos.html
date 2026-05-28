@@ -50,7 +50,6 @@
 
         <div class="content-body">
 
-            <!-- Encabezado y Barra de Acción -->
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div>
                     <h4 class="fw-bold mb-0" style="color: var(--brand-shadow);">Inventario de Productos</h4>
@@ -61,7 +60,6 @@
                 </button>
             </div>
 
-            <!-- Buscador (Optimizado para Escáner de Código de Barras) -->
             <div class="card premium-card p-3 mb-4">
                 <div class="row align-items-center">
                     <div class="col-md-8">
@@ -69,7 +67,6 @@
                                 <span class="input-group-text bg-white border-end-0" style="color: var(--brand-mist);">
                                     <i class="bi bi-upc-scan"></i>
                                 </span>
-                            <!-- El escáner envía 'Enter' al final, por eso escuchamos el evento keypress -->
                             <input type="text" id="inputBusqueda" class="form-control input-premium border-start-0 ps-0"
                                    placeholder="Escanea el código de barras o busca por nombre..." autofocus onkeypress="manejarBusqueda(event)">
                         </div>
@@ -85,7 +82,6 @@
                 </div>
             </div>
 
-            <!-- Tabla de Datos -->
             <div class="table-responsive table-premium">
                 <table class="table mb-0">
                     <thead>
@@ -99,7 +95,6 @@
                     </tr>
                     </thead>
                     <tbody id="tablaProductos">
-                    <!-- Los datos se inyectan aquí con JS -->
                     </tbody>
                 </table>
             </div>
@@ -107,7 +102,6 @@
     </main>
 </div>
 
-<!-- MODAL: Crear/Editar Producto -->
 <div class="modal fade" id="modalProducto" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content" style="border-radius: 15px; border: none;">
@@ -156,7 +150,6 @@
     </div>
 </div>
 
-<!-- MODAL: Reabastecer Stock -->
 <div class="modal fade" id="modalAbastecer" tabindex="-1">
     <div class="modal-dialog modal-sm modal-dialog-centered">
         <div class="modal-content" style="border-radius: 15px;">
@@ -175,25 +168,51 @@
     </div>
 </div>
 
-<!-- 1. PRIMERO OBLIGATORIAMENTE EL SCRIPT DE BOOTSTRAP -->
+<div class="modal fade" id="modalMerma" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 15px;">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold text-danger"><i class="bi bi-exclamation-octagon me-2"></i>Reportar Merma</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="small text-muted mb-4">La merma se descontará del inventario y quedará registrada inmutablemente en la bitácora de auditoría.</p>
+
+                <h6 class="fw-bold" id="txtMermaNombre" style="color: var(--brand-shadow);"></h6>
+                <p class="small text-muted mb-3">Stock actual en sistema: <span id="txtMermaStockActual" class="fw-bold text-dark"></span></p>
+
+                <input type="hidden" id="mermaId">
+
+                <div class="mb-3">
+                    <label class="label-premium">Cantidad a descontar (Pérdida)</label>
+                    <input type="number" class="form-control input-premium fs-5" id="mermaCantidad" min="1" value="1">
+                </div>
+                <div class="mb-4">
+                    <label class="label-premium">Motivo detallado</label>
+                    <textarea class="form-control input-premium" id="mermaMotivo" rows="2" placeholder="Ej. El producto llegó roto desde el proveedor..." required></textarea>
+                </div>
+                <button type="button" class="btn btn-danger w-100 fw-bold" onclick="procesarMerma()">Registrar Merma Permanentemente</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
-<!-- 2. DESPUÉS LA LÓGICA JAVASCRIPT FRONTEND -->
 <script>
-    // Variables globales vacías
+    // Variables globales
     let modalProd;
     let modalAbast;
+    let modalMerm; // Variable para el modal de mermas
 
-    // Esperamos a que la página cargue para instanciar Bootstrap
     document.addEventListener('DOMContentLoaded', function() {
         modalProd = new bootstrap.Modal(document.getElementById('modalProducto'));
         modalAbast = new bootstrap.Modal(document.getElementById('modalAbastecer'));
+        modalMerm = new bootstrap.Modal(document.getElementById('modalMerma')); // Inicializado
 
-        // Llamamos a la API
         cargarProductos();
     });
 
-    // 1. Cargar todos los productos (GET)
     function cargarProductos() {
         fetch('/api/productos')
             .then(res => {
@@ -207,20 +226,17 @@
             });
     }
 
-    // 2. Filtro de alertas (Regla de negocio: Stock Mínimo)
     function cargarAlertasStock() {
         fetch('/api/productos/alertas-stock')
             .then(res => res.json())
             .then(data => renderizarTabla(data));
     }
 
-    // 3. Manejo del Escáner (Simula 'Enter' tras teclear rápido)
     function manejarBusqueda(event) {
         if (event.key === 'Enter') {
             const query = document.getElementById('inputBusqueda').value.trim();
             if (query === '') return cargarProductos();
 
-            // Si es un número largo, probablemente es código de barras
             if(!isNaN(query) && query.length > 5) {
                 fetch(`/api/productos/codigo/${query}`)
                     .then(res => {
@@ -230,7 +246,6 @@
                     .then(prod => renderizarTabla([prod]))
                     .catch(() => alert('Producto no encontrado con ese código.'));
             } else {
-                // Si es texto, busca por nombre
                 fetch(`/api/productos/buscar?nombre=${query}`)
                     .then(res => res.json())
                     .then(data => renderizarTabla(data));
@@ -238,7 +253,6 @@
         }
     }
 
-    // 4. Renderizar el HTML de la tabla
     function renderizarTabla(productos) {
         const tbody = document.getElementById('tablaProductos');
         tbody.innerHTML = '';
@@ -255,15 +269,16 @@
             const stockClass = estaCritico ? 'stock-alert' : 'stock-ok';
             const stockIcon = estaCritico ? '<i class="bi bi-exclamation-circle-fill me-1"></i>' : '';
 
-            // Lógica visual para productos inactivos
-            const esActivo = p.activo !== false; // true por defecto
+            const esActivo = p.activo !== false;
             const opacidad = esActivo ? '1' : '0.5';
             const badgeInactivo = esActivo ? '' : '<span class="badge bg-danger ms-2">Inactivo</span>';
 
-            // Botón dinámico: Ojo abierto (para desactivar) u Ojo cerrado (para activar)
             const btnOjo = esActivo ?
                 `<button class="btn btn-sm btn-light text-warning me-1" onclick="alternarEstado(${p.id})" title="Desactivar (Ocultar)"><i class="bi bi-eye-slash"></i></button>` :
                 `<button class="btn btn-sm btn-light text-success me-1" onclick="alternarEstado(${p.id})" title="Activar (Mostrar)"><i class="bi bi-eye"></i></button>`;
+
+            // Lógica para escapar comillas simples en el nombre y evitar que JS truene
+            const nombreEscapado = p.nombre.replace(/'/g, "\\'");
 
             tbody.innerHTML += `
                     <tr style="opacity: ${opacidad}; transition: all 0.3s;">
@@ -272,9 +287,13 @@
                         <td>$${p.precioCompra.toFixed(2)}</td>
                         <td>$${p.precioVenta.toFixed(2)}</td>
                         <td><span class="${stockClass}">${stockIcon}${p.stock}</span></td>
-                        <td class="text-end">
-                            <button class="btn btn-sm btn-light text-primary me-1" onclick="abrirModalAbastecer(${p.id}, '${p.nombre}')" title="Ingresar Mercancía" ${!esActivo ? 'disabled' : ''}>
+                        <td class="text-end text-nowrap">
+                            <button class="btn btn-sm btn-light text-primary me-1" onclick="abrirModalAbastecer(${p.id}, '${nombreEscapado}')" title="Ingresar Mercancía" ${!esActivo ? 'disabled' : ''}>
                                 <i class="bi bi-box-arrow-in-down"></i>
+                            </button>
+
+                            <button class="btn btn-sm btn-light text-danger me-1" onclick="abrirModalMerma(${p.id}, '${nombreEscapado}', ${p.stock})" title="Reportar Merma" ${!esActivo ? 'disabled' : ''}>
+                                <i class="bi bi-exclamation-octagon"></i>
                             </button>
                             <button class="btn btn-sm btn-light text-secondary me-1" onclick="editarProducto(${p.id})" title="Editar">
                                 <i class="bi bi-pencil"></i>
@@ -289,21 +308,18 @@
         });
     }
 
-    // NUEVA FUNCIÓN: Llama a la API para apagar/prender el producto
     function alternarEstado(id) {
         if(confirm('¿Deseas cambiar el estado de este producto?')) {
             fetch(`/api/productos/${id}/estado`, { method: 'PATCH' })
                 .then(res => {
                     if(res.ok) {
-                        cargarProductos(); // Refresca la tabla
+                        cargarProductos();
                     } else {
                         alert('Error al cambiar el estado del producto.');
                     }
                 });
         }
     }
-
-    // --- Funciones CRUD de Interfaz ---
 
     function abrirModalCrear() {
         document.getElementById('formProducto').reset();
@@ -361,7 +377,6 @@
         document.getElementById('txtAbastecerNombre').innerText = nombre;
         document.getElementById('abastecerCantidad').value = 1;
         modalAbast.show();
-        // Foco al input para escáner rápido
         setTimeout(() => document.getElementById('abastecerCantidad').focus(), 500);
     }
 
@@ -379,6 +394,50 @@
                 }
             });
     }
+
+    // --- NUEVAS FUNCIONES DE MERMA ---
+    function abrirModalMerma(id, nombre, stockActual) {
+        if (stockActual <= 0) {
+            alert("No puedes reportar mermas de un producto que no tiene stock.");
+            return;
+        }
+        document.getElementById('mermaId').value = id;
+        document.getElementById('txtMermaNombre').innerText = nombre;
+        document.getElementById('txtMermaStockActual').innerText = stockActual;
+
+        const inputCant = document.getElementById('mermaCantidad');
+        inputCant.value = 1;
+        inputCant.max = stockActual; // Validamos visualmente que no devuelva de más
+
+        document.getElementById('mermaMotivo').value = '';
+        modalMerm.show();
+        setTimeout(() => document.getElementById('mermaCantidad').focus(), 500);
+    }
+
+    function procesarMerma() {
+        const id = document.getElementById('mermaId').value;
+        const cantidad = document.getElementById('mermaCantidad').value;
+        const motivo = document.getElementById('mermaMotivo').value.trim();
+
+        if (motivo === '') {
+            alert("El motivo detallado es obligatorio por temas de auditoría.");
+            document.getElementById('mermaMotivo').focus();
+            return;
+        }
+
+        // Enviamos los datos vía URL parameters (igual que el abastecimiento)
+        fetch(`/api/productos/${id}/merma?cantidad=${cantidad}&motivo=${encodeURIComponent(motivo)}`, { method: 'PATCH' })
+            .then(async res => {
+                if(res.ok) {
+                    modalMerm.hide();
+                    cargarProductos();
+                } else {
+                    const err = await res.text();
+                    alert('Error al reportar la merma: ' + err);
+                }
+            });
+    }
+    // ---------------------------------
 
     function eliminarProducto(id) {
         if(confirm('¿Estás seguro de que deseas eliminar este producto? (Si tiene historial de ventas, el sistema lo impedirá).')) {

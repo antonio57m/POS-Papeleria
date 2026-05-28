@@ -21,7 +21,7 @@
             <i class="bi bi-arrow-counterclockwise"></i> Devoluciones
         </a>
 
-        <th:block th:if="${usuarioLogueado.rol.name() == 'ADMIN'}">
+        <th:block th:if="${usuarioLogueado?.rol?.name() == 'ADMIN'}">
             <div class="px-4 py-2 mt-3 small text-uppercase fw-bold text-white-50" style="letter-spacing: 0.1em; font-size: 0.7rem;">Administración</div>
 
             <a th:href="@{/catalogo/productos}" class="menu-item" th:classappend="${activePage == 'catalogo' ? 'active' : ''}">

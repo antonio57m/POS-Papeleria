@@ -124,7 +124,10 @@
 
     function cargarUsuarios() {
         fetch('/api/usuarios')
-            .then(res => res.json())
+            .then(res => {
+                if(res.status === 401) { window.location.replace('/login'); throw new Error("Sesión inválida"); }
+                return res.json();
+            })
             .then(data => {
                 usuariosCache = data;
                 const tbody = document.getElementById('tablaUsuarios');
@@ -183,6 +186,14 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             }).then(async res => {
+                if (res.status === 401) { window.location.replace('/login'); return; } // <-- AGREGA ESTO
+                if (res.status === 205) {
+                    alert("Has desactivado tu propia cuenta. El sistema cerrará tu sesión.");
+                    window.location.href = '/login';
+                    return;
+                }
+                // ------------------------------------------
+
                 if(res.ok) {
                     cargarUsuarios();
                 } else {
@@ -246,12 +257,20 @@
         const method = id ? 'PUT' : 'POST';
         const url = id ? `/api/usuarios/${id}` : '/api/usuarios';
 
+        // TRUCO: Solo un fetch limpio
         fetch(url, {
             method: method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
-        })
-            .then(async res => {
+        }).then(async res => {
+            if (res.status === 401) { window.location.replace('/login'); return; } // <-- AGREGA ESTO
+            if (res.status === 205) {
+                    alert("Tus credenciales o permisos han cambiado. Por seguridad, tu sesión ha finalizado.");
+                    window.location.replace('/login'); // Replace evita que el usuario regrese con el botón "Atrás"
+                    return;
+                }
+                // -----------------------------------
+
                 if(res.ok) {
                     modalUI.hide();
                     cargarUsuarios();
@@ -260,6 +279,7 @@
                     alert('Error al guardar: ' + errorText);
                 }
             });
+
     }
 </script>
 </body>

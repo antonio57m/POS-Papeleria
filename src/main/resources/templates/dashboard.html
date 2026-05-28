@@ -16,7 +16,7 @@
             <div class="d-flex justify-content-between align-items-end mb-4">
                 <div>
                     <h3 class="fw-bold mb-1" style="color: var(--brand-shadow);">
-                        Hola, <span th:text="${usuarioLogueado.username}">Usuario</span> 👋
+                        Hola, <span th:text="${usuarioLogueado?.username}">Usuario</span> 👋
                     </h3>
                     <p class="text-muted mb-0">Resumen operativo de tu sucursal</p>
                 </div>
@@ -39,7 +39,7 @@
                     </div>
                 </div>
 
-                <th:block th:if="${usuarioLogueado.rol.name() == 'ADMIN'}">
+                <th:block th:if="${usuarioLogueado?.rol?.name() == 'ADMIN'}">
 
                     <div class="col-md-6 col-lg-3">
                         <div class="card premium-card p-4 h-100 border-top border-4" style="border-color: var(--brand-autumn) !important;">
@@ -96,16 +96,20 @@
 </div>
 
 <script th:inline="javascript">
-    const userId = /*[[${usuarioLogueado.id}]]*/ 0;
-    const esAdmin = /*[[${usuarioLogueado.rol.name() == 'ADMIN'}]]*/ false;
+    // CORRECCIÓN 3: Agregado ?. en las variables inyectadas por Thymeleaf al JavaScript
+    const userId = /*[[${usuarioLogueado?.id}]]*/ 0;
+    const esAdmin = /*[[${usuarioLogueado?.rol?.name() == 'ADMIN'}]]*/ false;
 
     document.addEventListener('DOMContentLoaded', function() {
         iniciarReloj();
-        verificarEstadoCaja();
+        // Si no hay userId válido, evitamos hacer la petición fetch para que no falle el JS
+        if(userId) {
+            verificarEstadoCaja();
+        }
 
         if(esAdmin) {
             cargarAlertasStock();
-            cargarAlertasInsumos(); // <--- Llamada añadida
+            cargarAlertasInsumos();
             cargarAlertasCaja();
         }
     });
