@@ -231,14 +231,44 @@
     </div>
 </div>
 
+<div class="modal fade" id="modalMermaInsumo" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 15px;">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold text-danger"><i class="bi bi-exclamation-octagon me-2"></i>Reportar Merma de Insumo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="small text-muted mb-4">El material se descontará del almacén interno y quedará registrado inmutablemente en la bitácora de auditoría.</p>
+
+                <h6 class="fw-bold" id="txtMermaInsumoNombre" style="color: var(--brand-shadow);"></h6>
+                <p class="small text-muted mb-3">Stock actual: <span id="txtMermaInsumoStock" class="fw-bold text-dark"></span> <span id="txtMermaInsumoUnidad"></span></p>
+
+                <input type="hidden" id="mermaInsumoId">
+
+                <div class="mb-3">
+                    <label class="label-premium">Cantidad a descontar</label>
+                    <input type="number" step="0.01" class="form-control input-premium fs-5" id="mermaInsumoCantidad" min="0.01" value="1">
+                </div>
+                <div class="mb-4">
+                    <label class="label-premium">Motivo detallado</label>
+                    <textarea class="form-control input-premium" id="mermaInsumoMotivo" rows="2" placeholder="Ej. Se derramó la tinta al rellenar el cartucho..." required></textarea>
+                </div>
+                <button type="button" class="btn btn-danger w-100 fw-bold" onclick="procesarMermaInsumo()">Registrar Merma Permanentemente</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    let modalIns, modalAjusteUI;
+    let modalIns, modalAjusteUI, modalMermIns;
     let listaInsumosGlobal = [];
 
     document.addEventListener('DOMContentLoaded', function() {
         modalIns = new bootstrap.Modal(document.getElementById('modalInsumo'));
         modalAjusteUI = new bootstrap.Modal(document.getElementById('modalAjuste'));
+        modalMermIns = new bootstrap.Modal(document.getElementById('modalMermaInsumo'));
         cargarInsumos();
 
         document.getElementById('selectInsumoParaReceta').addEventListener('change', function(e) {
@@ -273,19 +303,24 @@
                 `<button class="btn btn-sm btn-light text-warning me-1" onclick="alternarEstadoInsumo(${i.id})" title="Desactivar (Ocultar)"><i class="bi bi-eye-slash"></i></button>` :
                 `<button class="btn btn-sm btn-light text-success me-1" onclick="alternarEstadoInsumo(${i.id})" title="Activar (Mostrar)"><i class="bi bi-eye"></i></button>`;
 
+            // Lógica para escapar comillas simples en el nombre y evitar que JS truene
+            const nombreEscapado = i.nombre.replace(/'/g, "\\'");
+
             tbody.innerHTML += `
                 <tr style="opacity: ${opacidad}; transition: all 0.3s;">
                     <td class="text-muted fw-bold">#${i.id}</td>
                     <td class="fw-bold">${i.nombre} ${badgeInactivo}</td>
                     <td>${i.unidadMedida}</td>
                     <td class="fw-bold" style="color: var(--brand-stone);">${i.cantidadActual.toFixed(2)}</td>
-                    <td class="text-end">
-                        <button class="btn btn-sm btn-light text-primary me-1" onclick="abrirModalAjuste(${i.id}, '${i.nombre}', 'ABASTECER')" title="Ingresar Stock" ${!esActivo ? 'disabled' : ''}>
+                    <td class="text-end text-nowrap">
+                        <button class="btn btn-sm btn-light text-primary me-1" onclick="abrirModalAjuste(${i.id}, '${nombreEscapado}', 'ABASTECER')" title="Ingresar Stock" ${!esActivo ? 'disabled' : ''}>
                             <i class="bi bi-box-arrow-in-down"></i>
                         </button>
-                        <button class="btn btn-sm btn-light text-danger me-1" onclick="abrirModalAjuste(${i.id}, '${i.nombre}', 'DESCONTAR')" title="Reportar Merma/Baja" ${!esActivo ? 'disabled' : ''}>
-                            <i class="bi bi-box-arrow-up"></i>
+
+                        <button class="btn btn-sm btn-light text-danger me-1" onclick="abrirModalMermaInsumo(${i.id}, '${nombreEscapado}', ${i.cantidadActual}, '${i.unidadMedida}')" title="Reportar Merma Auditada" ${!esActivo ? 'disabled' : ''}>
+                            <i class="bi bi-exclamation-octagon"></i>
                         </button>
+
                         <button class="btn btn-sm btn-light text-secondary me-1" onclick="editarInsumo(${i.id})" title="Editar">
                             <i class="bi bi-pencil"></i>
                         </button>
@@ -345,23 +380,66 @@
         document.getElementById('ajusteId').value = id;
         document.getElementById('ajusteTipo').value = tipo;
         document.getElementById('txtAjusteNombre').innerText = nombre;
-        document.getElementById('txtAjusteTitulo').innerText = tipo === 'ABASTECER' ? 'Ingreso de Almacén' : 'Reporte de Merma';
+        document.getElementById('txtAjusteTitulo').innerText = 'Ingreso de Almacén'; // Solo se usará para Abastecer ahora
         document.getElementById('ajusteCantidad').value = 1;
         modalAjusteUI.show();
     }
 
     function procesarAjuste() {
         const id = document.getElementById('ajusteId').value;
-        const tipo = document.getElementById('ajusteTipo').value;
+        // tipo siempre será ABASTECER con esta actualización
         const cantidad = document.getElementById('ajusteCantidad').value;
-        const endpoint = tipo === 'ABASTECER' ? 'abastecer' : 'descontar';
 
-        fetch(`/api/insumos/${id}/${endpoint}?cantidad=${cantidad}`, { method: 'PATCH' })
+        fetch(`/api/insumos/${id}/abastecer?cantidad=${cantidad}`, { method: 'PATCH' })
             .then(res => {
                 if(res.ok) { modalAjusteUI.hide(); cargarInsumos(); }
                 else { alert('Error al procesar el ajuste de inventario.'); }
             });
     }
+
+    // --- NUEVAS FUNCIONES DE MERMA DE INSUMOS ---
+    function abrirModalMermaInsumo(id, nombre, stockActual, unidad) {
+        if (stockActual <= 0) {
+            alert("No puedes reportar mermas de un material que no tiene stock.");
+            return;
+        }
+        document.getElementById('mermaInsumoId').value = id;
+        document.getElementById('txtMermaInsumoNombre').innerText = nombre;
+        document.getElementById('txtMermaInsumoStock').innerText = stockActual.toFixed(2);
+        document.getElementById('txtMermaInsumoUnidad').innerText = unidad;
+
+        const inputCant = document.getElementById('mermaInsumoCantidad');
+        inputCant.value = 1;
+        inputCant.max = stockActual;
+
+        document.getElementById('mermaInsumoMotivo').value = '';
+        modalMermIns.show();
+        setTimeout(() => document.getElementById('mermaInsumoCantidad').focus(), 500);
+    }
+
+    function procesarMermaInsumo() {
+        const id = document.getElementById('mermaInsumoId').value;
+        const cantidad = document.getElementById('mermaInsumoCantidad').value;
+        const motivo = document.getElementById('mermaInsumoMotivo').value.trim();
+
+        if (motivo === '') {
+            alert("El motivo detallado es obligatorio por temas de auditoría.");
+            document.getElementById('mermaInsumoMotivo').focus();
+            return;
+        }
+
+        fetch(`/api/insumos/${id}/merma?cantidad=${cantidad}&motivo=${encodeURIComponent(motivo)}`, { method: 'PATCH' })
+            .then(async res => {
+                if(res.ok) {
+                    modalMermIns.hide();
+                    cargarInsumos();
+                } else {
+                    const err = await res.text();
+                    alert('Error al reportar la merma: ' + err);
+                }
+            });
+    }
+    // ---------------------------------
 
     // ==========================================
     // LÓGICA TAB 2: RECETAS

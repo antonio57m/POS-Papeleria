@@ -104,4 +104,13 @@ public class InsumoController {
             return ResponseEntity.notFound().build();
         }
     }
+    @PatchMapping("/{id}/merma")
+    public ResponseEntity<?> registrarMerma(@PathVariable Integer id, @RequestParam BigDecimal cantidad, @RequestParam String motivo) {
+        try {
+            insumoService.registrarMerma(id, cantidad, motivo);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
 }

@@ -82,4 +82,26 @@ public class InsumoService {
         insumo.setActivo(!estadoActual);
         insumoRepository.save(insumo);
     }
+
+    @Transactional
+    public void registrarMerma(Integer idInsumo, BigDecimal cantidad, String motivo) {
+        if(cantidad.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("La cantidad a descontar debe ser mayor a 0");
+        }
+
+        Insumo insumo = insumoRepository.findById(idInsumo)
+                .orElseThrow(() -> new IllegalArgumentException("Insumo no encontrado"));
+
+        if (insumo.getCantidadActual().compareTo(cantidad) < 0) {
+            throw new IllegalStateException("Stock insuficiente para reportar esta merma.");
+        }
+
+        insumo.setCantidadActual(insumo.getCantidadActual().subtract(cantidad));
+
+        // ESPIONAJE SILENCIOSO
+        auditoriaLogService.registrarEventoSilencioso("AJUSTE_MERMA",
+                "Merma de " + cantidad + " " + insumo.getUnidadMedida() + " en '" + insumo.getNombre() + "'. Motivo: " + motivo);
+
+        insumoRepository.save(insumo);
+    }
 }
