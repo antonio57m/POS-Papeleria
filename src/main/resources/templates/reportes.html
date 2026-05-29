@@ -92,7 +92,7 @@
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="caja-tab" data-bs-toggle="tab" data-bs-target="#caja" type="button" role="tab" onclick="cargarDescuadres()">
+                    <button class="nav-link" id="caja-tab" data-bs-toggle="tab" data-bs-target="#caja" type="button" role="tab" onclick="establecerFechasDescuadresDefecto()">
                         <i class="bi bi-cash-stack me-2"></i>Descuadres
                     </button>
                 </li>
@@ -116,12 +116,22 @@
             <div class="tab-content" id="reportesTabContent">
 
                 <div class="tab-pane fade show active" id="auditoria" role="tabpanel">
-                    <div class="card premium-card p-3 mb-4 border-0 shadow-sm" style="border-radius: 12px;">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h6 class="fw-bold mb-0" style="color: var(--brand-shadow);">Historial de Eventos (Inmutable)</h6>
-                            <button class="btn btn-outline-secondary fw-bold" onclick="cargarAuditoria()">
-                                <i class="bi bi-arrow-clockwise me-2"></i> Actualizar
-                            </button>
+                    <div class="card premium-card p-4 mb-4 border-0 shadow-sm" style="border-radius: 12px;">
+                        <h6 class="fw-bold mb-3" style="color: var(--brand-shadow);"><i class="bi bi-shield-check me-2"></i>Historial de Eventos (Inmutable)</h6>
+                        <div class="row align-items-end g-3">
+                            <div class="col-md-4">
+                                <label class="label-premium">Fecha Inicial</label>
+                                <input type="datetime-local" id="filtroAuditoriaInicio" class="form-control input-premium">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="label-premium">Fecha Final</label>
+                                <input type="datetime-local" id="filtroAuditoriaFin" class="form-control input-premium">
+                            </div>
+                            <div class="col-md-4">
+                                <button class="btn btn-premium w-100 py-2 fw-bold" onclick="cargarAuditoria()">
+                                    <i class="bi bi-funnel-fill me-2"></i>Filtrar Bitácora
+                                </button>
+                            </div>
                         </div>
                     </div>
                     <div class="table-responsive table-premium">
@@ -142,14 +152,26 @@
                 </div>
 
                 <div class="tab-pane fade" id="caja" role="tabpanel">
-                    <div class="card premium-card p-3 mb-4 border-0 shadow-sm" style="border-radius: 12px; background-color: rgba(118, 54, 38, 0.05);">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h6 class="fw-bold mb-0" style="color: var(--brand-autumn);"><i class="bi bi-exclamation-triangle-fill me-2"></i>Turnos con Faltantes o Sobrantes</h6>
-                                <small class="text-muted">El sistema detectó inconsistencias en el corte a ciegas de estos turnos.</small>
+
+                    <div class="card premium-card p-4 mb-4 border-0 shadow-sm" style="border-radius: 12px;">
+                        <h6 class="fw-bold mb-3" style="color: var(--brand-autumn);"><i class="bi bi-exclamation-triangle-fill me-2"></i>Filtro de Descuadres de Caja</h6>
+                        <div class="row align-items-end g-3">
+                            <div class="col-md-4">
+                                <label class="label-premium">Fecha Inicial</label>
+                                <input type="datetime-local" id="filtroDescuadreInicio" class="form-control input-premium">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="label-premium">Fecha Final</label>
+                                <input type="datetime-local" id="filtroDescuadreFin" class="form-control input-premium">
+                            </div>
+                            <div class="col-md-4">
+                                <button class="btn btn-premium w-100 py-2 fw-bold" onclick="cargarDescuadres()">
+                                    <i class="bi bi-funnel-fill me-2"></i>Filtrar Descuadres
+                                </button>
                             </div>
                         </div>
                     </div>
+
                     <div class="table-responsive table-premium">
                         <table class="table mb-0">
                             <thead>
@@ -162,12 +184,11 @@
                             </tr>
                             </thead>
                             <tbody id="tablaDescuadres">
-                            <tr><td colspan="5" class="text-center text-muted py-4">Cargando discrepancias...</td></tr>
+                            <tr><td colspan="5" class="text-center text-muted py-4">Selecciona un rango de fechas para consultar.</td></tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
-
                 <div class="tab-pane fade" id="graficas" role="tabpanel">
                     <div class="row g-4">
                         <div class="col-md-6">
@@ -289,10 +310,39 @@
     let myChartServicios = null;
 
     document.addEventListener('DOMContentLoaded', () => {
+        establecerFechasAuditoriaDefecto();
         cargarAuditoria();
     });
 
-    // Establecer fechas por defecto para el desglose (evitando el desfase UTC)
+    function establecerFechasAuditoriaDefecto() {
+        if(!document.getElementById('filtroAuditoriaInicio').value) {
+            const hoy = new Date();
+            const year = hoy.getFullYear();
+            const month = String(hoy.getMonth() + 1).padStart(2, '0');
+            const day = String(hoy.getDate()).padStart(2, '0');
+
+            document.getElementById('filtroAuditoriaInicio').value = `${year}-${month}-${day}T00:00`;
+            document.getElementById('filtroAuditoriaFin').value = `${year}-${month}-${day}T23:59`;
+        }
+    }
+
+    // --- NUEVO: Fechas por defecto para Descuadres (Carga el mes actual por defecto) ---
+    function establecerFechasDescuadresDefecto() {
+        if(!document.getElementById('filtroDescuadreInicio').value) {
+            const hoy = new Date();
+            const year = hoy.getFullYear();
+            const month = String(hoy.getMonth() + 1).padStart(2, '0');
+
+            // Del día 1 del mes actual al día de hoy
+            document.getElementById('filtroDescuadreInicio').value = `${year}-${month}-01T00:00`;
+
+            const day = String(hoy.getDate()).padStart(2, '0');
+            document.getElementById('filtroDescuadreFin').value = `${year}-${month}-${day}T23:59`;
+
+            cargarDescuadres(); // Cargamos automáticamente al abrir la pestaña
+        }
+    }
+
     function establecerFechasDefecto() {
         if(!document.getElementById('filtroFechaInicio').value) {
             const hoy = new Date();
@@ -300,7 +350,6 @@
             const month = String(hoy.getMonth() + 1).padStart(2, '0');
             const day = String(hoy.getDate()).padStart(2, '0');
 
-            // Formato local estricto YYYY-MM-DDTHH:mm (Ignora la zona horaria del servidor)
             document.getElementById('filtroFechaInicio').value = `${year}-${month}-${day}T00:00`;
             document.getElementById('filtroFechaFin').value = `${year}-${month}-${day}T23:59`;
         }
@@ -308,19 +357,32 @@
 
     // --- LÓGICA DE AUDITORÍA MANTENIDA ---
     function cargarAuditoria() {
-        fetch('/api/auditoria')
+        const inicio = document.getElementById('filtroAuditoriaInicio').value;
+        const fin = document.getElementById('filtroAuditoriaFin').value;
+
+        const tbody = document.getElementById('tablaAuditoria');
+        tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-2"></span>Filtrando bitácora...</td></tr>`;
+
+        let url = '/api/auditoria';
+        if(inicio && fin) {
+            url = `/api/auditoria/fechas?inicio=${inicio}:00&fin=${fin}:00`;
+        }
+
+        fetch(url)
             .then(res => res.json())
             .then(data => {
-                const tbody = document.getElementById('tablaAuditoria');
                 tbody.innerHTML = '';
+
                 data.sort((a, b) => new Date(b.fechaHora) - new Date(a.fechaHora));
+
                 if(data.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-4">No hay eventos registrados.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-4">No hay eventos registrados en este rango de fechas.</td></tr>`;
                     return;
                 }
+
                 data.forEach(log => {
                     const fechaFormat = new Date(log.fechaHora).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'medium' });
-                    const badgeClass = log.accion.includes('ELIMINAR') || log.accion.includes('ERROR') ? 'bg-danger' : 'bg-secondary';
+                    const badgeClass = log.accion.includes('ELIMINAR') || log.accion.includes('ERROR') || log.accion.includes('FRAUDE') ? 'bg-danger' : 'bg-secondary';
                     let descripcionLimpia = log.descripcion
                         ? log.descripcion
                             .replace(/true/gi, 'Activado').replace(/false/gi, 'Desactivado')
@@ -330,29 +392,46 @@
                             .replace(/SUNDAY/g, 'Domingo')
                         : '-';
                     tbody.innerHTML += `
-        <tr>
-            <td class="small text-muted">${fechaFormat}</td>
-            <td class="fw-bold text-dark"><i class="bi bi-person-badge me-1"></i>${log.usuario ? log.usuario.username : 'Sistema'}</td>
-            <td><span class="badge ${badgeClass}">${log.accion}</span></td>
-            <td class="small">${descripcionLimpia}</td>
-        </tr>
-    `;
+                        <tr>
+                            <td class="small text-muted">${fechaFormat}</td>
+                            <td class="fw-bold text-dark"><i class="bi bi-person-badge me-1"></i>${log.usuario ? log.usuario.username : 'Sistema'}</td>
+                            <td><span class="badge ${badgeClass}">${log.accion}</span></td>
+                            <td class="small">${descripcionLimpia}</td>
+                        </tr>
+                    `;
                 });
-            }).catch(err => console.error(err));
+            }).catch(err => {
+            console.error(err);
+            tbody.innerHTML = `<tr><td colspan="4" class="text-center text-danger py-4">Error al cargar la bitácora. Asegúrate de compilar el backend.</td></tr>`;
+        });
     }
 
-    // --- LÓGICA DE DESCUADRES MANTENIDA ---
+    // --- LÓGICA DE DESCUADRES ACTUALIZADA CON FILTROS ---
     function cargarDescuadres() {
-        fetch('/api/cortes-caja/discrepancias')
+        const inicio = document.getElementById('filtroDescuadreInicio').value;
+        const fin = document.getElementById('filtroDescuadreFin').value;
+
+        if(!inicio || !fin) {
+            alert('Establece ambas fechas para filtrar los descuadres.');
+            return;
+        }
+
+        const tbody = document.getElementById('tablaDescuadres');
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-2"></span>Filtrando descuadres...</td></tr>`;
+
+        fetch(`/api/cortes-caja/discrepancias/fechas?inicio=${inicio}:00&fin=${fin}:00`)
             .then(res => res.json())
             .then(data => {
-                const tbody = document.getElementById('tablaDescuadres');
                 tbody.innerHTML = '';
+
+                // Ordenamos del más reciente al más antiguo
                 data.sort((a, b) => new Date(b.fechaCierre) - new Date(a.fechaCierre));
+
                 if(data.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="5" class="text-center text-success py-4"><i class="bi bi-check-circle-fill me-2"></i>¡Excelente! No hay descuadres de caja.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="5" class="text-center text-success py-4"><i class="bi bi-check-circle-fill me-2"></i>¡Excelente! No hay descuadres de caja en este rango de fechas.</td></tr>`;
                     return;
                 }
+
                 data.forEach(corte => {
                     const fechaFormat = corte.fechaCierre ? new Date(corte.fechaCierre).toLocaleString('es-MX') : 'Turno Abierto';
                     const diff = parseFloat(corte.diferencia);
@@ -371,10 +450,13 @@
                         </tr>
                     `;
                 });
-            }).catch(err => console.error(err));
+            }).catch(err => {
+            console.error(err);
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger py-4">Asegúrate de agregar el endpoint en CorteCajaController y reiniciar el servidor.</td></tr>`;
+        });
     }
 
-    // --- LÓGICA DE GRÁFICAS MANTENIDA CORREGIDA ---
+    // --- LÓGICA DE GRÁFICAS MANTENIDA ---
     function cargarGraficas() {
         fetch('/api/ventas/analitica/top-productos').then(res => res.json()).then(data => {
             const nombres = data.map(item => item[0]);
@@ -404,7 +486,6 @@
     }
 
     // --- LÓGICA DE DESGLOSE MANTENIDA ---
-    // --- LÓGICA DE DESGLOSE MANTENIDA Y MEJORADA ---
     function generarReporteVentas() {
         const inicio = document.getElementById('filtroFechaInicio').value;
         const fin = document.getElementById('filtroFechaFin').value;
@@ -417,7 +498,7 @@
                 const tbody = document.getElementById('tablaMasterVentas');
                 tbody.innerHTML = '';
 
-                const ventas = data.ventas; // Ahora extraemos la lista desde el nuevo objeto
+                const ventas = data.ventas;
 
                 if(ventas.length === 0) {
                     document.getElementById('tarjetasFinancieras').style.display = 'none';
@@ -475,14 +556,7 @@
         }
     }
 
-    // ==========================================
-    // NUEVA LÓGICA: CONFIGURACIÓN DE CORREOS
-    // ==========================================
-    // ==========================================
-    // NUEVA LÓGICA: CONFIGURACIÓN DE REPORTES
-    // ==========================================
     function cargarConfiguracionCorreos() {
-        // Actualizamos la ruta al nuevo endpoint
         fetch('/api/configuracion/reportes')
             .then(res => res.json())
             .then(data => {
@@ -517,7 +591,6 @@
 
         const correosFinales = correosUnicos.join(',');
 
-        // Enviamos correos y el día seleccionado
         fetch('/api/configuracion/reportes', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },

@@ -64,6 +64,7 @@ public class CorteCajaService {
         // Matemáticas del corte
         BigDecimal diferencia = montoDeclarado.subtract(montoEsperado);
 
+        // Espía para descuadres (Alerta Roja)
         if (diferencia.compareTo(BigDecimal.ZERO) != 0) {
             auditoriaLogService.registrarEventoSilencioso("CIERRE_CAJA_DESCUADRE", "El cajero cerró con una diferencia de: $" + diferencia);
         }
@@ -75,38 +76,48 @@ public class CorteCajaService {
 
         CorteCaja corteGuardado = corteCajaRepository.save(corte);
 
+        // --- ESPÍA SILENCIOSO: CIERRE DE CAJA EXITOSO ---
+        // Se registra SIEMPRE, garantizando la trazabilidad local aunque no haya internet.
+        auditoriaLogService.registrarEventoSilencioso("CIERRE_CAJA",
+                "Cierre de turno completado. Monto declarado: $" + montoDeclarado + " | Monto esperado: $" + montoEsperado);
+
         // --- EL CEREBRO DE LAS NOTIFICACIONES ---
         String correosGuardados = configuracionService.obtenerCorreosReporte();
 
         if (!correosGuardados.isEmpty()) {
-            String[] destinatarios = correosGuardados.split(",");
+            try {
+                String[] destinatarios = correosGuardados.split(",");
 
-            // TRUCO SENIOR: Forzamos la inicialización del nombre del usuario mientras la conexión
-            // a la base de datos sigue abierta, para evitar el LazyInitializationException en los correos.
-            corteGuardado.getUsuario().getUsername();
+                // TRUCO SENIOR: Forzamos la inicialización del nombre del usuario mientras la conexión
+                // a la base de datos sigue abierta, para evitar el LazyInitializationException en los correos.
+                corteGuardado.getUsuario().getUsername();
 
-            // 1. ENVÍO DIARIO (Se dispara SIEMPRE que se cierra una caja e incluye el Stock)
-            emailService.enviarReporteDiarioHtml(destinatarios, corteGuardado);
+                // 1. ENVÍO DIARIO (Se dispara SIEMPRE que se cierra una caja e incluye el Stock)
+                emailService.enviarReporteDiarioHtml(destinatarios, corteGuardado);
 
-            // 2. ENVÍO SEMANAL DINÁMICO
-            String diaConfigurado = configuracionService.obtenerDiaReporteSemanal(); // Ej. "FRIDAY"
-            DayOfWeek diaActual = corteGuardado.getFechaCierre().getDayOfWeek();
+                // 2. ENVÍO SEMANAL DINÁMICO
+                String diaConfigurado = configuracionService.obtenerDiaReporteSemanal(); // Ej. "FRIDAY"
+                DayOfWeek diaActual = corteGuardado.getFechaCierre().getDayOfWeek();
 
-            // Si hoy es el día que el cliente eligió en la configuración...
-            if (diaActual.name().equalsIgnoreCase(diaConfigurado)) {
+                // Si hoy es el día que el cliente eligió en la configuración...
+                if (diaActual.name().equalsIgnoreCase(diaConfigurado)) {
 
-                // Calculamos desde hace 6 días a las 00:00:00 hasta este preciso momento
-                LocalDateTime finSemana = corteGuardado.getFechaCierre();
-                LocalDateTime inicioSemana = finSemana.minusDays(6).with(LocalTime.MIN);
+                    // Calculamos desde hace 6 días a las 00:00:00 hasta este preciso momento
+                    LocalDateTime finSemana = corteGuardado.getFechaCierre();
+                    LocalDateTime inicioSemana = finSemana.minusDays(6).with(LocalTime.MIN);
 
-                // Disparamos el reporte pesado
-                emailService.enviarReporteSemanalHtml(destinatarios, inicioSemana, finSemana);
+                    // Disparamos el reporte pesado
+                    emailService.enviarReporteSemanalHtml(destinatarios, inicioSemana, finSemana);
+                }
+            } catch (Exception e) {
+                // Si falla el internet, atrapamos el error para que la base de datos no haga un rollback
+                // y la caja sí se marque como cerrada en el sistema local.
+                System.err.println("La caja se cerró localmente, pero falló el envío de correos: " + e.getMessage());
             }
         }
 
         return corteGuardado;
     }
-
     // 3. Consultas para el Dashboard del Administrador
     public Optional<CorteCaja> obtenerCajaActiva(Usuario cajero) {
         return corteCajaRepository.findCajaAbiertaPorUsuario(cajero);

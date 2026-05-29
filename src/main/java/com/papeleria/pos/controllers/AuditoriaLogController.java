@@ -2,6 +2,7 @@ package com.papeleria.pos.controllers;
 
 import com.papeleria.pos.models.AuditoriaLog;
 import com.papeleria.pos.models.Usuario;
+import com.papeleria.pos.repositories.AuditoriaLogRepository;
 import com.papeleria.pos.services.AuditoriaLogService;
 import com.papeleria.pos.services.UsuarioService;
 import lombok.RequiredArgsConstructor;
@@ -23,8 +24,10 @@ public class AuditoriaLogController {
     // Inyectamos UsuarioService para poder validar qué empleado hizo la acción
     private final UsuarioService usuarioService;
 
-    // DTO limpio usando Records para recibir datos desde el Frontend (ej. cuando el
-    // frontend detecta un intento de login fallido y quiere guardarlo en la base de datos).
+    // Inyectamos el repositorio para la búsqueda por fechas ordenada
+    private final AuditoriaLogRepository auditoriaLogRepository;
+
+    // DTO limpio usando Records para recibir datos desde el Frontend
     public record EventoAuditoriaRequest(Integer idUsuario, String accion, String descripcion) {}
 
     // --- RUTAS DE LECTURA (GET) ---
@@ -34,24 +37,21 @@ public class AuditoriaLogController {
         return ResponseEntity.ok(auditoriaLogService.obtenerTodosLosLogs());
     }
 
-
     // Filtrar por tipo de evento (ej. /api/auditoria/accion/TICKET_CANCELADO)
     @GetMapping("/accion/{accion}")
     public ResponseEntity<List<AuditoriaLog>> obtenerPorAccion(@PathVariable String accion) {
         return ResponseEntity.ok(auditoriaLogService.buscarPorAccion(accion));
     }
 
-    // Filtrar por rango de fechas para el cierre de caja o reportes mensuales
-    // El Frontend debe enviar la fecha en formato ISO (ej. 2026-04-30T08:00:00)
+    // FIX SENIOR: Único método mapeado a "/fechas" para evitar ambigüedad (Mapeo 404/500)
     @GetMapping("/fechas")
-    public ResponseEntity<List<AuditoriaLog>> obtenerPorRangoFechas(
+    public ResponseEntity<List<AuditoriaLog>> obtenerAuditoriaPorFechas(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime inicio,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fin) {
 
-        return ResponseEntity.ok(auditoriaLogService.buscarPorRangoDeFechas(inicio, fin));
+        // Llamamos al repositorio usando las fechas recibidas para que lo devuelva ordenado
+        return ResponseEntity.ok(auditoriaLogRepository.findByFechaHoraBetweenOrderByFechaHoraDesc(inicio, fin));
     }
-
-
 
     // --- RUTAS DE ESCRITURA (POST) ---
 

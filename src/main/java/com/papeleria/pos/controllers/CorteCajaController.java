@@ -1,6 +1,7 @@
 package com.papeleria.pos.controllers;
 
 import com.papeleria.pos.models.CorteCaja;
+import com.papeleria.pos.repositories.CorteCajaRepository;
 import com.papeleria.pos.services.CorteCajaService;
 import com.papeleria.pos.services.UsuarioService;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ public class CorteCajaController {
 
     private final CorteCajaService corteCajaService;
     private final UsuarioService usuarioService;
+    private final CorteCajaRepository corteCajaRepository;
 
     // DTOs limpios usando Records para la apertura y cierre de caja
     public record AbrirCajaRequest(Integer idUsuario) {}
@@ -80,5 +82,13 @@ public class CorteCajaController {
     public ResponseEntity<List<CorteCaja>> obtenerZombies(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaLimite) {
         return ResponseEntity.ok(corteCajaService.buscarTurnosZombies(fechaLimite));
+    }
+
+    @GetMapping("/discrepancias/fechas")
+    public ResponseEntity<List<CorteCaja>> obtenerDiscrepanciasPorFechas(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime inicio,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fin) {
+
+        return ResponseEntity.ok(corteCajaRepository.findCortesConDiscrepanciaPorFechas(inicio, fin));
     }
 }

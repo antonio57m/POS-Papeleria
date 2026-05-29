@@ -42,7 +42,14 @@ public class DevolucionService {
 
         DetalleVenta detalle = detalleVentaRepository.findById(idDetalle)
                 .orElseThrow(() -> new IllegalArgumentException("La línea del ticket no existe."));
-
+        // --- BLINDAJE ANTI-FRAUDE: Bloquear devolución de intangibles ---
+        if (detalle.getTipoItem() == TipoItem.SERVICIO) {
+            // FIX SENIOR: Usamos getIdItem() porque la relación es polimórfica
+            auditoriaLogService.registrarEventoSilencioso("INTENTO_FRAUDE_DEVOLUCION",
+                    "El usuario intentó devolver un servicio (ID del Servicio: " + detalle.getIdItem() + "). Acción bloqueada.");
+            throw new IllegalStateException("ALERTA DE SEGURIDAD: Los servicios no son retornables. Acción denegada.");
+        }
+        // ----------------------------------------------------------------
         Usuario cajero = usuarioService.buscarPorId(idCajero)
                 .orElseThrow(() -> new IllegalArgumentException("Cajero no encontrado."));
 
@@ -72,7 +79,30 @@ public class DevolucionService {
         detalleVentaRepository.save(detalle);
 
         Venta venta = detalle.getVenta();
-        venta.setEstado(EstadoVenta.DEVUELTA_PARCIAL);
+
+        // 5.1 LÓGICA ESTRICTA: ¿Se devolvió todo el ticket o solo una parte?
+        boolean esDevolucionTotal = true;
+
+        // FIX SENIOR: Usamos el repositorio para traer los artículos de forma 100% segura
+        java.util.List<DetalleVenta> todosLosDetalles = detalleVentaRepository.findByVenta(venta);
+
+        // Recorremos todos los artículos del ticket
+        for (DetalleVenta dv : todosLosDetalles) {
+            // Comparamos usando compareTo para BigDecimal
+            if (dv.getCantidad().compareTo(dv.getCantidadDevuelta()) > 0) {
+                // Si encontramos aunque sea un artículo que no se ha devuelto por completo, es parcial
+                esDevolucionTotal = false;
+                break;
+            }
+        }
+
+        // Asignamos el estado correcto
+        if (esDevolucionTotal) {
+            venta.setEstado(EstadoVenta.DEVUELTA_TOTAL);
+        } else {
+            venta.setEstado(EstadoVenta.DEVUELTA_PARCIAL);
+        }
+
         ventaRepository.save(venta);
 
         auditoriaLogService.registrarEventoSilencioso("DEVOLUCION_CREADA", "Se registró devolución de $" + montoAReintegrar + " por motivo: " + motivo);

@@ -37,4 +37,7 @@ public interface CorteCajaRepository extends JpaRepository<CorteCaja, Integer> {
 
     // NUEVO MÉTODO A AGREGAR PARA EL REPORTE SEMANAL
     List<CorteCaja> findByFechaCierreBetween(LocalDateTime inicio, LocalDateTime fin);
+    // Nuevo filtro para consultar descuadres en un rango de fechas
+    @Query("SELECT c FROM CorteCaja c WHERE c.diferencia <> 0 AND c.fechaCierre BETWEEN :inicio AND :fin ORDER BY c.fechaCierre DESC")
+    List<CorteCaja> findCortesConDiscrepanciaPorFechas(java.time.LocalDateTime inicio, java.time.LocalDateTime fin);
 }

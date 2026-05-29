@@ -191,10 +191,17 @@
                     const cantDisponible = d.cantidadOriginal - d.cantidadDevueltaHistorial;
                     let btnHtml = '';
 
-                    if (cantDisponible > 0) {
-                        btnHtml = `<button class="btn btn-sm btn-outline-danger fw-bold" onclick="abrirModal(${d.idDetalle}, '${d.nombre}', ${cantDisponible}, ${d.precioUnitario})">Devolver</button>`;
-                    } else {
-                        btnHtml = `<span class="badge bg-secondary">Devuelto Total</span>`;
+                    // LÓGICA ANTI-FRAUDE: Detectamos si es servicio
+                    if (d.tipo === 'SERVICIO' || d.tipo === 'Servicio') {
+                        btnHtml = `<span class="badge bg-dark px-3 py-2">Servicio (No devolvible)</span>`;
+                    }
+                    // Si es producto y aún hay disponibles para devolver
+                    else if (cantDisponible > 0) {
+                        btnHtml = `<button class="btn btn-sm btn-outline-danger fw-bold px-3" onclick="abrirModal(${d.idDetalle}, '${d.nombre}', ${cantDisponible}, ${d.precioUnitario})">Devolver</button>`;
+                    }
+                    // Si ya se devolvió por completo
+                    else {
+                        btnHtml = `<span class="badge bg-secondary px-3 py-2">Devuelto Total</span>`;
                     }
 
                     tbody.innerHTML += `
@@ -248,7 +255,9 @@
             .then(res => res.json().then(data => ({ status: res.status, body: data })))
             .then(res => {
                 if(res.status === 201) {
-                    alert(`${res.body.mensaje}\n\nMonto a entregar al cliente: $${res.body.montoReintegrado.toFixed(2)}\n\n⚠️ ${res.body.alerta}`);
+                    // MENSAJE CORREGIDO A PETICIÓN
+                    alert(`Devolución procesada con éxito.\n\nMonto a entregar al cliente: $${res.body.montoReintegrado.toFixed(2)}\n\n⚠️ Recuerda colocar el ticket y el producto en la bandeja de devoluciones.`);
+
                     modalDevUI.hide();
                     buscarTicket(); // Refrescar la tabla
                 } else {
