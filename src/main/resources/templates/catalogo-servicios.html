@@ -10,7 +10,7 @@
         box-shadow: 0 4px 15px rgba(42, 49, 50, 0.03);
     }
     .table-premium thead th {
-        background-color: var(--brand-mist); /* Homologado con el resto del sistema */
+        background-color: var(--brand-mist);
         color: var(--white);
         font-weight: 600;
         text-transform: uppercase;
@@ -156,7 +156,6 @@
         const tbody = document.getElementById('tablaServicios');
         tbody.innerHTML = '';
 
-        // Ordenamiento Alfabético Automático (Mejor UX)
         servicios.sort((a, b) => a.nombre.localeCompare(b.nombre));
 
         if(servicios.length === 0) {
@@ -169,7 +168,6 @@
             const opacidad = esActivo ? '1' : '0.5';
             const badgeInactivo = esActivo ? '' : '<span class="badge bg-danger ms-2">Inactivo</span>';
 
-            // Si el precio es 0, mostramos un badge indicando que es variable
             const precioDisplay = s.precioVenta === 0 ?
                 '<span class="badge bg-warning text-dark"><i class="bi bi-cursor-text me-1"></i>Variable</span>' :
                 `$${s.precioVenta.toFixed(2)}`;
@@ -224,6 +222,13 @@
     }
 
     function guardarServicio() {
+        // FIX SENIOR: Interceptamos el formulario antes de enviarlo
+        const form = document.getElementById('formServicio');
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+
         const id = document.getElementById('servId').value;
         const servicio = {
             nombre: document.getElementById('servNombre').value,
@@ -237,12 +242,13 @@
             method: method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(servicio)
-        }).then(res => {
+        }).then(async res => {
             if(res.ok) {
                 modalServ.hide();
                 cargarServicios();
             } else {
-                res.text().then(err => alert("Error: " + err));
+                // Mensaje limpio en lugar de la traza de Java
+                alert("Ocurrió un error. Verifica que los datos sean correctos y que no haya duplicados.");
             }
         });
     }

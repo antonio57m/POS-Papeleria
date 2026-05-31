@@ -225,7 +225,6 @@
             const query = document.getElementById('inputBusqueda').value.trim();
             if (query === '') return cargarProductos();
 
-            // FIX SENIOR 2: Si el usuario ingresa solo números (sin importar la longitud), buscar primero por código
             if(/^\d+$/.test(query)) {
                 fetch(`/api/productos/codigo/${query}`)
                     .then(res => {
@@ -233,7 +232,7 @@
                         throw new Error('No es codigo');
                     })
                     .then(prod => renderizarTabla([prod], true))
-                    .catch(() => buscarPorNombre(query)); // Fallback a nombre si no existe el código
+                    .catch(() => buscarPorNombre(query));
             } else {
                 buscarPorNombre(query);
             }
@@ -257,7 +256,6 @@
 
         productos.sort((a, b) => a.nombre.localeCompare(b.nombre));
 
-        // FIX SENIOR 1: Limitar renderizado a 100 productos si es carga general para no congelar la PC
         let productosMostrar = productos;
         let mensajeLimite = '';
 
@@ -348,6 +346,13 @@
     }
 
     function guardarProducto() {
+        // FIX SENIOR: Interceptamos el formulario antes de mandar basura al backend
+        const form = document.getElementById('formProducto');
+        if (!form.checkValidity()) {
+            form.reportValidity(); // Lanza las alertas nativas de "Completa este campo"
+            return;
+        }
+
         const id = document.getElementById('prodId').value;
         const producto = {
             codigoBarras: document.getElementById('prodCodigo').value,
@@ -365,12 +370,13 @@
             method: method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(producto)
-        }).then(res => {
+        }).then(async res => {
             if(res.ok) {
                 modalProd.hide();
                 cargarProductos();
             } else {
-                res.text().then(err => alert("Error: " + err));
+                // Mensaje limpio en caso de falla en backend (ej. código duplicado)
+                alert("Ocurrió un error. Verifica que no estés duplicando un código de barras existente.");
             }
         });
     }
