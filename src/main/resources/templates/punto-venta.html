@@ -2,13 +2,10 @@
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head('Terminal POS')}"></head>
 <style>
-    /* Estilos para la Opción 1: Panel de Servicios Rápidos */
     .quick-services {
         overflow-y: auto;
         padding-right: 5px;
     }
-
-    /* Scrollbar sutil para los servicios rápidos si son muchos */
     .quick-services::-webkit-scrollbar {
         width: 4px;
     }
@@ -16,7 +13,6 @@
         background: rgba(255, 255, 255, 0.2);
         border-radius: 4px;
     }
-
     .service-btn {
         background-color: rgba(255, 255, 255, 0.05);
         border: 1px solid rgba(255, 255, 255, 0.1);
@@ -31,7 +27,6 @@
         overflow: hidden;
         text-overflow: ellipsis;
     }
-
     .service-btn:hover {
         background-color: var(--brand-mist);
         border-color: var(--brand-mist);
@@ -49,7 +44,7 @@
         <div class="content-body" style="padding-top: 15px;">
             <div class="row h-100 pos-container">
 
-                <div class="col-lg-8 h-100 d-flex flex-column">
+                <div class="col-md-8 h-100 d-flex flex-column">
 
                     <div class="row mb-3">
                         <div class="col-12">
@@ -87,7 +82,7 @@
                     </div>
                 </div>
 
-                <div class="col-lg-4 h-100">
+                <div class="col-md-4 h-100">
                     <div class="checkout-panel d-flex flex-column">
                         <h5 class="text-uppercase fw-bold text-white-50 mb-4" style="letter-spacing: 0.1em;">Resumen de Venta</h5>
 
@@ -204,7 +199,6 @@
     const inputScanner = document.getElementById('posScanner');
     const resultadosDiv = document.getElementById('resultadosBusqueda');
 
-    // --- MAGIA SENIOR: FUNCION PARA ATRAPAR EL 401 GLOBALMENTE ---
     function verificarSeguridad(res) {
         if (res.status === 401 || (res.redirected && res.url.includes('/login'))) {
             alert("⚠️ ALERTA DE SEGURIDAD\n\nTu cuenta ha sido desactivada o modificada por el administrador. Tu sesión se cerrará inmediatamente.");
@@ -213,13 +207,10 @@
         }
         return res;
     }
-    // -------------------------------------------------------------
 
     document.addEventListener('DOMContentLoaded', function() {
-
-        // 1. VALIDACIÓN EN TIEMPO REAL: ¿Tiene caja abierta?
         fetch(`/api/cortes-caja/activa/usuario/${idCajeroActual}`)
-            .then(verificarSeguridad) // Inyectado
+            .then(verificarSeguridad)
             .then(res => {
                 if (!res.ok) {
                     alert("Aviso de Seguridad: Debes abrir un turno de caja para poder ingresar a la terminal de cobro.");
@@ -246,10 +237,9 @@
             });
     });
 
-    // --- CARGAR SERVICIOS RÁPIDOS EN LA COLUMNA DERECHA ---
     function cargarServiciosRapidos() {
         fetch('/api/servicios')
-            .then(verificarSeguridad) // Inyectado
+            .then(verificarSeguridad)
             .then(res => res.json())
             .then(servicios => {
                 const panel = document.getElementById('panelServiciosRapidos');
@@ -278,7 +268,6 @@
             });
     }
 
-    // --- MOTOR DEL BUSCADOR EN TIEMPO REAL ---
     function manejarBusquedaEnTiempoReal(e) {
         clearTimeout(debounceTimer);
         const query = e.target.value.trim();
@@ -289,10 +278,10 @@
         }
 
         debounceTimer = setTimeout(() => {
-            if (!isNaN(query) && query.length >= 4) {
-                // Buscador en tiempo real por Código de Barras
+            // FIX SENIOR 2: Regex puro, si es número (no importa longitud), busca por código.
+            if (/^\d+$/.test(query)) {
                 fetch(`/api/productos/codigo/${query}`)
-                    .then(verificarSeguridad) // Inyectado
+                    .then(verificarSeguridad)
                     .then(res => res.ok ? res.json() : null)
                     .then(prod => {
                         if (prod && prod.activo !== false) {
@@ -304,9 +293,7 @@
                     .catch(err => {
                         if(err.message !== "Sesión finalizada por seguridad") console.error("Error:", err);
                     });
-
             } else {
-                // Buscador en tiempo real por Texto (Nombres)
                 Promise.all([
                     fetch(`/api/productos/buscar?nombre=${query}`).then(verificarSeguridad).then(res => res.json()),
                     fetch(`/api/servicios/buscar?nombre=${query}`).then(verificarSeguridad).then(res => res.json())
@@ -363,7 +350,6 @@
         resultadosDiv.style.display = 'block';
     }
 
-    // --- MOTOR DEL ESCÁNER FÍSICO ---
     function manejarEscannerPuro(e) {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -372,10 +358,10 @@
             const query = inputScanner.value.trim();
             if (query === '') return;
 
-            if (!isNaN(query) && query.length >= 5) {
-                // LECTOR DE CÓDIGO DE BARRAS
+            // FIX SENIOR 2: Si es un número lo manda directo por código
+            if (/^\d+$/.test(query)) {
                 fetch(`/api/productos/codigo/${query}`)
-                    .then(verificarSeguridad) // Inyectado
+                    .then(verificarSeguridad)
                     .then(res => {
                         if(res.ok) return res.json();
                         throw new Error('Producto no encontrado en catálogo');
@@ -386,15 +372,19 @@
                             limpiarBuscador();
                             return;
                         }
-
                         agregarProductoACarrito(prod);
                         limpiarBuscador();
                     })
                     .catch(err => {
-                        if(err.message !== "Sesión finalizada por seguridad") alert(err.message);
+                        // Si falla, intentamos seleccionar la primera coincidencia del autocompletado por nombre
+                        const primerItem = document.querySelector('.autocomplete-item');
+                        if(primerItem) {
+                            primerItem.click();
+                        } else if(err.message !== "Sesión finalizada por seguridad") {
+                            alert(err.message);
+                        }
                     });
             } else {
-                // Seleccionar desde menú desplegable
                 const primerItem = document.querySelector('.autocomplete-item');
                 if(primerItem) {
                     primerItem.click();
@@ -420,8 +410,6 @@
         resultadosDiv.style.display = 'none';
         inputScanner.focus();
     }
-
-    // --- LÓGICA DEL CARRITO ---
 
     function agregarProductoACarrito(prod) {
         const index = carrito.findIndex(i => i.idItem === prod.id && i.tipoItem === 'PRODUCTO');
@@ -555,7 +543,6 @@
     }
 
     function eliminarFila(index) {
-        // ESPIONAJE SILENCIOSO
         const itemABorrar = carrito[index];
         const cantidad = itemABorrar.cantidad;
         const nombre = itemABorrar.descripcion;
@@ -578,7 +565,6 @@
         if(carrito.length > 0 && confirm('¿Deseas cancelar toda la cuenta actual?')) {
             const totalCancealdo = carrito.reduce((sum, item) => sum + item.subtotal, 0);
 
-            // ESPÍA SILENCIOSO
             fetch('/api/auditoria', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -665,13 +651,11 @@
             body: JSON.stringify(requestDTO)
         })
             .then(res => {
-                // --- NUEVO BLINDAJE FRONTEND PARA BOTÓN COBRAR ---
                 if (res.status === 401 || (res.redirected && res.url.includes('/login'))) {
                     alert("⚠️ ALERTA DE SEGURIDAD\n\nTu cuenta ha sido desactivada o modificada por el administrador. Tu sesión se cerrará inmediatamente.");
                     window.location.replace('/login');
                     return Promise.reject("Sesión finalizada por seguridad");
                 }
-                // --------------------------------------------------
                 if(res.ok) return res.json();
                 return res.text().then(err => { throw new Error(err) });
             })
@@ -680,7 +664,6 @@
                 carrito = [];
                 renderizarCarrito();
 
-                // Magia: En lugar de un alert, abrimos el ticket en una ventana emergente pequeña
                 window.open(`/ticket/${ventaGenerada.id}`, '_blank', 'width=400,height=600');
 
                 document.getElementById('btnConfirmarPago').disabled = false;

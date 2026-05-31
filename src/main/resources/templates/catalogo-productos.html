@@ -2,7 +2,6 @@
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head('Catálogo de Productos')}"></head>
 <style>
-    /* Estilos premium para la tabla de datos */
     .table-premium {
         background-color: var(--white);
         border-radius: 12px;
@@ -25,21 +24,13 @@
         color: var(--brand-shadow);
         border-bottom: 1px solid rgba(0,0,0,0.03);
     }
-    .table-premium tbody tr:hover {
-        background-color: #F8FBFC;
-    }
-    /* Alerta de inventario usando la paleta de la marca */
+    .table-premium tbody tr:hover { background-color: #F8FBFC; }
     .stock-alert {
-        color: var(--brand-autumn);
-        font-weight: 700;
+        color: var(--brand-autumn); font-weight: 700;
         background-color: rgba(118, 54, 38, 0.1);
-        padding: 4px 10px;
-        border-radius: 6px;
+        padding: 4px 10px; border-radius: 6px;
     }
-    .stock-ok {
-        color: var(--brand-stone);
-        font-weight: 600;
-    }
+    .stock-ok { color: var(--brand-stone); font-weight: 600; }
 </style>
 <body>
 <div class="app-wrapper">
@@ -61,17 +52,17 @@
             </div>
 
             <div class="card premium-card p-3 mb-4">
-                <div class="row align-items-center">
-                    <div class="col-md-8">
+                <div class="row align-items-center g-2">
+                    <div class="col-md-7">
                         <div class="input-group">
-                                <span class="input-group-text bg-white border-end-0" style="color: var(--brand-mist);">
-                                    <i class="bi bi-upc-scan"></i>
-                                </span>
+                            <span class="input-group-text bg-white border-end-0" style="color: var(--brand-mist);">
+                                <i class="bi bi-upc-scan"></i>
+                            </span>
                             <input type="text" id="inputBusqueda" class="form-control input-premium border-start-0 ps-0"
-                                   placeholder="Escanea el código de barras o busca por nombre..." autofocus onkeypress="manejarBusqueda(event)">
+                                   placeholder="Escanea el código o busca por nombre..." autofocus onkeypress="manejarBusqueda(event)">
                         </div>
                     </div>
-                    <div class="col-md-4 text-end">
+                    <div class="col-md-5 text-end">
                         <button class="btn btn-outline-secondary" onclick="cargarProductos()">
                             <i class="bi bi-arrow-clockwise"></i> Refrescar
                         </button>
@@ -200,15 +191,12 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-    // Variables globales
-    let modalProd;
-    let modalAbast;
-    let modalMerm; // Variable para el modal de mermas
+    let modalProd, modalAbast, modalMerm;
 
     document.addEventListener('DOMContentLoaded', function() {
         modalProd = new bootstrap.Modal(document.getElementById('modalProducto'));
         modalAbast = new bootstrap.Modal(document.getElementById('modalAbastecer'));
-        modalMerm = new bootstrap.Modal(document.getElementById('modalMerma')); // Inicializado
+        modalMerm = new bootstrap.Modal(document.getElementById('modalMerma'));
 
         cargarProductos();
     });
@@ -219,17 +207,17 @@
                 if (!res.ok) throw new Error('Error HTTP: ' + res.status);
                 return res.json();
             })
-            .then(data => renderizarTabla(data))
+            .then(data => renderizarTabla(data, false))
             .catch(err => {
                 const tbody = document.getElementById('tablaProductos');
-                tbody.innerHTML = `<tr><td colspan="6" class="text-center text-danger py-4"><b>Error al conectar con la API:</b> ${err.message}. Revisa la consola (F12).</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center text-danger py-4"><b>Error al conectar con la API:</b> ${err.message}.</td></tr>`;
             });
     }
 
     function cargarAlertasStock() {
         fetch('/api/productos/alertas-stock')
             .then(res => res.json())
-            .then(data => renderizarTabla(data));
+            .then(data => renderizarTabla(data, true));
     }
 
     function manejarBusqueda(event) {
@@ -237,34 +225,48 @@
             const query = document.getElementById('inputBusqueda').value.trim();
             if (query === '') return cargarProductos();
 
-            if(!isNaN(query) && query.length > 5) {
+            // FIX SENIOR 2: Si el usuario ingresa solo números (sin importar la longitud), buscar primero por código
+            if(/^\d+$/.test(query)) {
                 fetch(`/api/productos/codigo/${query}`)
                     .then(res => {
                         if(res.ok) return res.json();
-                        throw new Error('No encontrado');
+                        throw new Error('No es codigo');
                     })
-                    .then(prod => renderizarTabla([prod]))
-                    .catch(() => alert('Producto no encontrado con ese código.'));
+                    .then(prod => renderizarTabla([prod], true))
+                    .catch(() => buscarPorNombre(query)); // Fallback a nombre si no existe el código
             } else {
-                fetch(`/api/productos/buscar?nombre=${query}`)
-                    .then(res => res.json())
-                    .then(data => renderizarTabla(data));
+                buscarPorNombre(query);
             }
         }
     }
 
-    function renderizarTabla(productos) {
+    function buscarPorNombre(query) {
+        fetch(`/api/productos/buscar?nombre=${query}`)
+            .then(res => res.json())
+            .then(data => renderizarTabla(data, true));
+    }
+
+    function renderizarTabla(productos, esBusqueda) {
         const tbody = document.getElementById('tablaProductos');
         tbody.innerHTML = '';
-
-        productos.sort((a, b) => a.nombre.localeCompare(b.nombre));
 
         if(productos.length === 0) {
             tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-4">No se encontraron productos.</td></tr>`;
             return;
         }
 
-        productos.forEach(p => {
+        productos.sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+        // FIX SENIOR 1: Limitar renderizado a 100 productos si es carga general para no congelar la PC
+        let productosMostrar = productos;
+        let mensajeLimite = '';
+
+        if (!esBusqueda && productos.length > 100) {
+            productosMostrar = productos.slice(0, 100);
+            mensajeLimite = `<tr><td colspan="6" class="text-center text-muted py-3 bg-light"><i class="bi bi-info-circle me-2"></i>Mostrando 100 registros para optimizar velocidad. Usa el buscador para encontrar un artículo específico.</td></tr>`;
+        }
+
+        productosMostrar.forEach(p => {
             const estaCritico = p.stock <= p.stockMinimo;
             const stockClass = estaCritico ? 'stock-alert' : 'stock-ok';
             const stockIcon = estaCritico ? '<i class="bi bi-exclamation-circle-fill me-1"></i>' : '';
@@ -277,7 +279,6 @@
                 `<button class="btn btn-sm btn-light text-warning me-1" onclick="alternarEstado(${p.id})" title="Desactivar (Ocultar)"><i class="bi bi-eye-slash"></i></button>` :
                 `<button class="btn btn-sm btn-light text-success me-1" onclick="alternarEstado(${p.id})" title="Activar (Mostrar)"><i class="bi bi-eye"></i></button>`;
 
-            // Lógica para escapar comillas simples en el nombre y evitar que JS truene
             const nombreEscapado = p.nombre.replace(/'/g, "\\'");
 
             tbody.innerHTML += `
@@ -306,17 +307,18 @@
                     </tr>
                 `;
         });
+
+        if (mensajeLimite !== '') {
+            tbody.innerHTML += mensajeLimite;
+        }
     }
 
     function alternarEstado(id) {
         if(confirm('¿Deseas cambiar el estado de este producto?')) {
             fetch(`/api/productos/${id}/estado`, { method: 'PATCH' })
                 .then(res => {
-                    if(res.ok) {
-                        cargarProductos();
-                    } else {
-                        alert('Error al cambiar el estado del producto.');
-                    }
+                    if(res.ok) cargarProductos();
+                    else alert('Error al cambiar el estado del producto.');
                 });
         }
     }
@@ -325,6 +327,7 @@
         document.getElementById('formProducto').reset();
         document.getElementById('prodId').value = '';
         document.getElementById('modalTitulo').innerText = 'Nuevo Producto';
+        document.getElementById('prodCompra').value = '0.00';
         modalProd.show();
     }
 
@@ -395,7 +398,6 @@
             });
     }
 
-    // --- NUEVAS FUNCIONES DE MERMA ---
     function abrirModalMerma(id, nombre, stockActual) {
         if (stockActual <= 0) {
             alert("No puedes reportar mermas de un producto que no tiene stock.");
@@ -407,7 +409,7 @@
 
         const inputCant = document.getElementById('mermaCantidad');
         inputCant.value = 1;
-        inputCant.max = stockActual; // Validamos visualmente que no devuelva de más
+        inputCant.max = stockActual;
 
         document.getElementById('mermaMotivo').value = '';
         modalMerm.show();
@@ -425,7 +427,6 @@
             return;
         }
 
-        // Enviamos los datos vía URL parameters (igual que el abastecimiento)
         fetch(`/api/productos/${id}/merma?cantidad=${cantidad}&motivo=${encodeURIComponent(motivo)}`, { method: 'PATCH' })
             .then(async res => {
                 if(res.ok) {
@@ -437,17 +438,13 @@
                 }
             });
     }
-    // ---------------------------------
 
     function eliminarProducto(id) {
         if(confirm('¿Estás seguro de que deseas eliminar este producto? (Si tiene historial de ventas, el sistema lo impedirá).')) {
             fetch(`/api/productos/${id}`, { method: 'DELETE' })
                 .then(res => {
-                    if(res.ok) {
-                        cargarProductos();
-                    } else {
-                        res.text().then(err => alert(err));
-                    }
+                    if(res.ok) cargarProductos();
+                    else res.text().then(err => alert(err));
                 });
         }
     }

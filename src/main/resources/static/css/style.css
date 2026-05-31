@@ -23,7 +23,7 @@ body {
 /* Elevación premium: sombra más suave y difusa */
 .premium-card {
     background: var(--white);
-    border: 1px solid rgba(42, 49, 50, 0.08); /* Borde sutil color shadow */
+    border: 1px solid rgba(42, 49, 50, 0.08);
     border-radius: 16px;
     box-shadow: 0 12px 35px rgba(42, 49, 50, 0.05);
 }
@@ -33,7 +33,7 @@ body {
     background-color: var(--brand-stone);
     color: var(--white);
     border: none;
-    border-radius: 8px; /* Bordes menos redondeados dan un toque más serio/corporativo */
+    border-radius: 8px;
     padding: 12px 24px;
     font-weight: 600;
     letter-spacing: 0.5px;
@@ -41,7 +41,7 @@ body {
 }
 
 .btn-premium:hover, .btn-premium:focus {
-    background-color: #275268; /* Stone ligeramente oscurecido */
+    background-color: #275268;
     transform: translateY(-1px);
     box-shadow: 0 6px 15px rgba(51, 107, 135, 0.25);
     color: var(--white);
@@ -77,7 +77,6 @@ body {
 /* ==========================================================================
    Layout Base (Dashboard, Sidebar, Header)
    ========================================================================== */
-
 .app-wrapper {
     display: flex;
     min-height: 100vh;
@@ -104,7 +103,7 @@ body {
 
 .sidebar-logo {
     max-width: 180px;
-    filter: brightness(0) invert(1); /* Convierte el logo a blanco si es oscuro */
+    filter: brightness(0) invert(1);
 }
 
 .sidebar-menu {
@@ -177,7 +176,6 @@ body {
 /* ==========================================================================
    Terminal de Punto de Venta (POS)
    ========================================================================== */
-
 .pos-container {
     height: calc(100vh - 130px);
     overflow: hidden;
@@ -197,7 +195,6 @@ body {
     overflow-y: auto;
 }
 
-/* Tabla del Carrito */
 .table-cart thead th {
     background-color: #F8FBFC;
     color: var(--brand-shadow);
@@ -224,7 +221,6 @@ body {
     padding: 4px;
 }
 
-/* Panel de Cobro (Derecho) */
 .checkout-panel {
     background-color: var(--brand-shadow);
     color: var(--white);
@@ -251,26 +247,6 @@ body {
     line-height: 1;
 }
 
-/* Botones Rápidos de Servicios */
-.service-btn {
-    background-color: #F8FBFC;
-    border: 1px solid #EAEAEA;
-    color: var(--brand-shadow);
-    border-radius: 8px;
-    padding: 10px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    text-align: left;
-    transition: var(--transition);
-}
-
-.service-btn:hover {
-    background-color: var(--brand-mist);
-    color: var(--white);
-    border-color: var(--brand-mist);
-}
-
-/* Modal de Pago */
 .payment-method-btn {
     border: 2px solid #EAEAEA;
     background-color: transparent;
@@ -285,10 +261,6 @@ body {
     background-color: rgba(51, 107, 135, 0.05);
     color: var(--brand-stone);
 }
-
-/* ==========================================================================
-   Autocompletado de Búsqueda (POS)
-   ========================================================================== */
 
 .search-container {
     position: relative;
@@ -329,7 +301,7 @@ body {
 
 .autocomplete-item:hover {
     background-color: #F8FBFC;
-    padding-left: 25px; /* Pequeña animación de desplazamiento */
+    padding-left: 25px;
 }
 
 .item-title {
@@ -350,7 +322,6 @@ body {
     color: var(--brand-stone);
 }
 
-/* Botones Rápidos en Panel Oscuro */
 .service-btn {
     background-color: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -368,4 +339,38 @@ body {
     background-color: var(--brand-mist);
     border-color: var(--brand-mist);
     color: var(--white);
+}
+
+/* ==========================================================================
+   MODO POS EXTREMO: AJUSTES PARA PANTALLAS CUADRADAS 1024x768 - FIX SENIOR
+   ========================================================================== */
+@media (max-width: 1200px) {
+    /* 1. Encoger todo al 80% */
+    html { font-size: 80% !important; }
+
+    /* 2. Reducir el menú lateral para regalarle espacio a la tabla de cobro */
+    .sidebar { width: 170px !important; }
+
+    /* 3. Reducir padding muerto */
+    .top-header { height: 50px !important; padding: 0 15px !important; }
+    .content-body { padding: 15px !important; padding-top: 5px !important;}
+
+    /* 4. Tablas compactas */
+    .table-premium thead th { padding: 8px 6px !important; font-size: 0.70rem !important; white-space: nowrap; }
+    .table-premium tbody td { padding: 8px 6px !important; font-size: 0.85rem !important; }
+
+    /* 5. Tarjetas */
+    .premium-card { padding: 1rem !important; }
+    .ticket-search-box { padding: 1rem !important; }
+
+    /* 6. POS Específico */
+    .pos-container { height: calc(100vh - 65px) !important; }
+    .checkout-panel { padding: 12px !important; }
+    .total-display { padding: 10px !important; margin-bottom: 10px !important; }
+    .total-amount { font-size: 2.2rem !important; }
+
+    .table-cart th, .table-cart td { padding: 6px 4px !important; font-size: 0.85rem !important; }
+    .service-btn { padding: 8px 4px !important; font-size: 0.75rem !important; }
+    .payment-method-btn { padding: 6px !important; }
+    .payment-method-btn i { font-size: 1.1rem !important; margin-bottom: 0 !important; }
 }

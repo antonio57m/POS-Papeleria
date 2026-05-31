@@ -209,17 +209,22 @@
                 <div class="tab-pane fade" id="desglose" role="tabpanel">
                     <div class="card premium-card p-4 mb-4 border-0 shadow-sm" style="border-radius: 12px;">
                         <div class="row align-items-end g-3">
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <label class="label-premium">Fecha/Hora Inicial</label>
                                 <input type="datetime-local" id="filtroFechaInicio" class="form-control input-premium">
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <label class="label-premium">Fecha/Hora Final</label>
                                 <input type="datetime-local" id="filtroFechaFin" class="form-control input-premium">
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <button class="btn btn-premium w-100 py-2 fw-bold" onclick="generarReporteVentas()">
                                     <i class="bi bi-funnel-fill me-2"></i>Generar Desglose
+                                </button>
+                            </div>
+                            <div class="col-md-3">
+                                <button class="btn btn-outline-secondary w-100 py-2 fw-bold" id="btnImprimirDesglose" onclick="imprimirDesgloseComercial()" disabled>
+                                    <i class="bi bi-printer-fill me-2"></i>Imprimir Reporte
                                 </button>
                             </div>
                         </div>
@@ -308,6 +313,7 @@
 <script>
     let myChartProductos = null;
     let myChartServicios = null;
+    let reporteActualGlobal = null; // Variable para almacenar los datos en memoria para imprimir
 
     document.addEventListener('DOMContentLoaded', () => {
         establecerFechasAuditoriaDefecto();
@@ -326,20 +332,18 @@
         }
     }
 
-    // --- NUEVO: Fechas por defecto para Descuadres (Carga el mes actual por defecto) ---
     function establecerFechasDescuadresDefecto() {
         if(!document.getElementById('filtroDescuadreInicio').value) {
             const hoy = new Date();
             const year = hoy.getFullYear();
             const month = String(hoy.getMonth() + 1).padStart(2, '0');
 
-            // Del día 1 del mes actual al día de hoy
             document.getElementById('filtroDescuadreInicio').value = `${year}-${month}-01T00:00`;
 
             const day = String(hoy.getDate()).padStart(2, '0');
             document.getElementById('filtroDescuadreFin').value = `${year}-${month}-${day}T23:59`;
 
-            cargarDescuadres(); // Cargamos automáticamente al abrir la pestaña
+            cargarDescuadres();
         }
     }
 
@@ -355,7 +359,7 @@
         }
     }
 
-    // --- LÓGICA DE AUDITORÍA MANTENIDA ---
+    // --- LÓGICA DE AUDITORÍA ---
     function cargarAuditoria() {
         const inicio = document.getElementById('filtroAuditoriaInicio').value;
         const fin = document.getElementById('filtroAuditoriaFin').value;
@@ -372,7 +376,6 @@
             .then(res => res.json())
             .then(data => {
                 tbody.innerHTML = '';
-
                 data.sort((a, b) => new Date(b.fechaHora) - new Date(a.fechaHora));
 
                 if(data.length === 0) {
@@ -406,7 +409,7 @@
         });
     }
 
-    // --- LÓGICA DE DESCUADRES ACTUALIZADA CON FILTROS ---
+    // --- LÓGICA DE DESCUADRES ---
     function cargarDescuadres() {
         const inicio = document.getElementById('filtroDescuadreInicio').value;
         const fin = document.getElementById('filtroDescuadreFin').value;
@@ -423,8 +426,6 @@
             .then(res => res.json())
             .then(data => {
                 tbody.innerHTML = '';
-
-                // Ordenamos del más reciente al más antiguo
                 data.sort((a, b) => new Date(b.fechaCierre) - new Date(a.fechaCierre));
 
                 if(data.length === 0) {
@@ -456,7 +457,7 @@
         });
     }
 
-    // --- LÓGICA DE GRÁFICAS MANTENIDA ---
+    // --- LÓGICA DE GRÁFICAS ---
     function cargarGraficas() {
         fetch('/api/ventas/analitica/top-productos').then(res => res.json()).then(data => {
             const nombres = data.map(item => item[0]);
@@ -485,7 +486,7 @@
         if(canvasId === 'chartServicios') myChartServicios = newChart;
     }
 
-    // --- LÓGICA DE DESGLOSE MANTENIDA ---
+    // --- LÓGICA DE DESGLOSE ---
     function generarReporteVentas() {
         const inicio = document.getElementById('filtroFechaInicio').value;
         const fin = document.getElementById('filtroFechaFin').value;
@@ -498,20 +499,26 @@
                 const tbody = document.getElementById('tablaMasterVentas');
                 tbody.innerHTML = '';
 
+                // Guardamos en la variable global para permitir imprimir
+                reporteActualGlobal = data;
+
                 const ventas = data.ventas;
 
                 if(ventas.length === 0) {
                     document.getElementById('tarjetasFinancieras').style.display = 'none';
+                    document.getElementById('btnImprimirDesglose').disabled = true;
                     tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-4">No se registraron ventas.</td></tr>`;
                     return;
                 }
 
-                // Pintamos las tarjetas financieras
+                // Pintamos las tarjetas y habilitamos el botón
                 document.getElementById('tarjetasFinancieras').style.display = 'flex';
+                document.getElementById('btnImprimirDesglose').disabled = false;
+
                 document.getElementById('uiTotalVendido').innerText = '$' + data.totalVendido.toFixed(2);
                 document.getElementById('uiGananciaNeta').innerText = '$' + data.gananciaNeta.toFixed(2);
 
-                ventas.sort((a, b) => new Date(b.fechaHora) - new Date(a.fechaHora));
+                ventas.sort((a, b) => new Date(a.fechaHora) - new Date(b.fechaHora)); // Orden cronológico para el reporte
 
                 ventas.forEach(v => {
                     const dateFmt = new Date(v.fechaHora).toLocaleString('es-MX');
@@ -553,6 +560,184 @@
         } else {
             rowChild.classList.add('d-none');
             icon.className = "bi bi-chevron-down";
+        }
+    }
+
+    // --- NUEVO: Motor de Impresión Empresarial Asíncrono ---
+    async function imprimirDesgloseComercial() {
+        if (!reporteActualGlobal || reporteActualGlobal.ventas.length === 0) return;
+
+        const btn = document.getElementById('btnImprimirDesglose');
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>Generando...`;
+        btn.disabled = true;
+
+        try {
+            const ventas = reporteActualGlobal.ventas;
+
+            // Recolectamos el detalle de TODAS las ventas de golpe mediante Promises
+            const promesasDetalles = ventas.map(v => fetch(`/api/ventas/${v.id}`).then(res => res.json()));
+            const detallesResult = await Promise.all(promesasDetalles);
+
+            const inicioDate = new Date(document.getElementById('filtroFechaInicio').value).toLocaleString('es-MX');
+            const finDate = new Date(document.getElementById('filtroFechaFin').value).toLocaleString('es-MX');
+            const emisionDate = new Date().toLocaleString('es-MX');
+
+            let rowsHtml = '';
+
+            // Construimos la estructura de la tabla maestra con subtablas
+            ventas.forEach((v, index) => {
+                const dateFmt = new Date(v.fechaHora).toLocaleString('es-MX');
+                const pagoTexto = v.metodoPago.replace('_', ' ');
+                const estadoTexto = v.estado.replace('_', ' ');
+                const detalleData = detallesResult[index]; // Extraemos su detalle correspondiente
+
+                rowsHtml += `
+                    <tr class="master-row">
+                        <td><strong>V-${v.id}</strong></td>
+                        <td>${dateFmt}</td>
+                        <td>${pagoTexto}</td>
+                        <td class="text-center">${estadoTexto}</td>
+                        <td class="text-end"><strong>$${v.total.toFixed(2)}</strong></td>
+                    </tr>
+                `;
+
+                if (detalleData && detalleData.detalles && detalleData.detalles.length > 0) {
+                    let subRows = '';
+                    detalleData.detalles.forEach(d => {
+                        subRows += `
+                            <tr>
+                                <td>${d.nombre} <span style="color:#888; font-size:9px;">(${d.tipo})</span></td>
+                                <td class="text-center">${d.cantidadOriginal}</td>
+                                <td class="text-end">$${d.precioUnitario.toFixed(2)}</td>
+                                <td class="text-end">$${d.subtotal.toFixed(2)}</td>
+                            </tr>
+                        `;
+                    });
+
+                    rowsHtml += `
+                        <tr>
+                            <td colspan="5" class="detail-cell">
+                                <table class="detail-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Artículo Consumido</th>
+                                            <th class="text-center">Cant.</th>
+                                            <th class="text-end">P. Unitario</th>
+                                            <th class="text-end">Subtotal</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${subRows}
+                                    </tbody>
+                                </table>
+                            </td>
+                        </tr>
+                    `;
+                }
+            });
+
+            // Ensamblaje del Documento HTML para el formato de impresión
+            const printContent = `
+            <!DOCTYPE html>
+            <html lang="es">
+            <head>
+                <title>Auditoría de Ventas - Impresión</title>
+                <style>
+                    body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 12px; color: #111; margin: 0; padding: 20px; }
+                    .header { text-align: center; margin-bottom: 25px; border-bottom: 2px solid #111; padding-bottom: 15px; }
+                    .title { font-size: 20px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+                    .subtitle { font-size: 12px; color: #444; margin-top: 3px; }
+
+                    .summary-container { display: flex; justify-content: space-between; margin-bottom: 25px; gap: 20px; }
+                    .summary-box { flex: 1; border: 1px solid #ddd; border-radius: 6px; padding: 15px; text-align: center; background: #fdfdfd; }
+                    .summary-title { font-size: 11px; text-transform: uppercase; color: #666; font-weight: bold; margin-bottom: 5px; }
+                    .summary-value { font-size: 18px; font-weight: bold; color: #111; }
+
+                    .main-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+                    .main-table th { background-color: #eee; color: #111; padding: 10px; font-size: 11px; text-transform: uppercase; text-align: left; border-bottom: 2px solid #ccc; -webkit-print-color-adjust: exact; print-color-adjust: exact;}
+                    .main-table .text-end { text-align: right !important; }
+                    .main-table .text-center { text-align: center !important; }
+
+                    .master-row > td { padding: 10px; border-bottom: 2px solid #ddd; background: #fff; font-size: 12px; }
+                    .detail-cell { padding: 0 !important; border-bottom: 1px solid #222 !important; }
+
+                    .detail-table { width: 90%; margin: 10px auto 20px auto; border-collapse: collapse; border-left: 3px solid #666; }
+                    .detail-table th { background: #f9f9f9; padding: 6px; font-size: 10px; text-align: left; border-bottom: 1px solid #ccc; color: #333; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                    .detail-table td { padding: 6px; font-size: 11px; border-bottom: 1px solid #eee; color: #444; }
+
+                    .footer { text-align: center; font-size: 10px; color: #666; margin-top: 40px; border-top: 1px solid #ddd; padding-top: 10px; }
+
+                    @media print {
+                        body { padding: 0; }
+                        .summary-box { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <div class="title">Auditoría y Desglose Financiero de Ventas</div>
+                    <div class="subtitle"><strong>Período Analizado:</strong> ${inicioDate} al ${finDate}</div>
+                    <div class="subtitle"><strong>Fecha de Emisión:</strong> ${emisionDate}</div>
+                </div>
+
+                <div class="summary-container">
+                    <div class="summary-box">
+                        <div class="summary-title">Total de Operaciones</div>
+                        <div class="summary-value">${ventas.length} Tickets</div>
+                    </div>
+                    <div class="summary-box">
+                        <div class="summary-title">Ingreso Bruto Total</div>
+                        <div class="summary-value">$${reporteActualGlobal.totalVendido.toFixed(2)}</div>
+                    </div>
+                    <div class="summary-box">
+                        <div class="summary-title">Ganancia Neta Real (Utilidad)</div>
+                        <div class="summary-value">$${reporteActualGlobal.gananciaNeta.toFixed(2)}</div>
+                    </div>
+                </div>
+
+                <table class="main-table">
+                    <thead>
+                        <tr>
+                            <th>Folio</th>
+                            <th>Fecha y Hora</th>
+                            <th>Método de Pago</th>
+                            <th class="text-center">Estado Auditoría</th>
+                            <th class="text-end">Cobro Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rowsHtml}
+                    </tbody>
+                </table>
+
+                <div class="footer">
+                    Documento contable generado automáticamente por el Sistema POS Empresarial.<br>
+                    <strong>Impreso para fines de auditoría y control de pérdidas.</strong>
+                </div>
+
+                <script>
+                    window.onload = function() {
+                        window.print();
+                        setTimeout(function(){ window.close(); }, 500);
+                    }
+                <\/script>
+            </body>
+            </html>
+            `;
+
+            // Abre una ventana oculta temporal, inyecta el HTML y detona la caja de diálogo de la impresora
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(printContent);
+            printWindow.document.close();
+
+        } catch (error) {
+            alert("Error al extraer los datos para el documento de impresión. Revisa la conexión de red.");
+            console.error(error);
+        } finally {
+            // Regresa el botón a la normalidad
+            btn.innerHTML = originalHtml;
+            btn.disabled = false;
         }
     }
 
@@ -602,7 +787,7 @@
             .then(res => {
                 if(res.ok) {
                     alert('¡Configuración de reportes guardada exitosamente!');
-                    cargarConfiguracionCorreos(); // Recargamos para visualizar
+                    cargarConfiguracionCorreos();
                 } else {
                     alert('Hubo un error al guardar la configuración.');
                 }

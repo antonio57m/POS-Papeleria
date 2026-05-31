@@ -3,6 +3,8 @@ package com.papeleria.pos.services;
 import com.papeleria.pos.models.CorteCaja;
 import com.papeleria.pos.models.Usuario;
 import com.papeleria.pos.repositories.CorteCajaRepository;
+import com.papeleria.pos.repositories.DevolucionRepository;
+import com.papeleria.pos.repositories.VentaRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,20 +22,25 @@ public class CorteCajaService {
     @Autowired
     private CorteCajaRepository corteCajaRepository;
 
-    // INYECTAMOS EL SERVICIO DE CORREOS
     @Autowired
     private ReporteEmailService emailService;
 
     @Autowired
     private ConfiguracionService configuracionService;
 
-    @Autowired private AuditoriaLogService auditoriaLogService;
+    @Autowired
+    private AuditoriaLogService auditoriaLogService;
+
+    @Autowired
+    private DevolucionRepository devolucionRepository;
+
+    // INYECTAMOS EL REPOSITORIO DE VENTAS PARA HACER LA MATEMÁTICA INTERNA
+    @Autowired
+    private VentaRepository ventaRepository;
 
     // 1. Apertura de Turno (Al iniciar el día o cambio de turno)
-// 1. Apertura de Turno (Al iniciar el día o cambio de turno)
     @Transactional
     public CorteCaja abrirCaja(Usuario cajero) {
-        // Regla de Negocio: Un cajero no puede abrir dos cajas al mismo tiempo.
         Optional<CorteCaja> cajaAbierta = corteCajaRepository.findCajaAbiertaPorUsuario(cajero);
         if (cajaAbierta.isPresent()) {
             throw new IllegalStateException("El usuario " + cajero.getUsername() + " ya tiene un turno abierto.");
@@ -44,7 +51,6 @@ public class CorteCajaService {
 
         CorteCaja corteGuardado = corteCajaRepository.save(nuevoCorte);
 
-        // --- ESPÍA SILENCIOSO: APERTURA DE CAJA ---
         auditoriaLogService.registrarEventoSilencioso("APERTURA_CAJA", "El cajero abrió un nuevo turno de caja.");
 
         return corteGuardado;
@@ -52,24 +58,36 @@ public class CorteCajaService {
 
     // 2. El Corte a Ciegas (Al finalizar el turno)
     @Transactional
-    public CorteCaja cerrarCaja(Integer idCorte, BigDecimal montoDeclarado, BigDecimal montoEsperado) {
+    public CorteCaja cerrarCaja(Integer idCorte, BigDecimal montoDeclarado, BigDecimal montoEsperadoFrontend) {
         CorteCaja corte = corteCajaRepository.findById(idCorte)
                 .orElseThrow(() -> new IllegalArgumentException("Corte de caja no encontrado."));
 
-        // Regla de Negocio: No se puede cerrar una caja dos veces.
         if (corte.getFechaCierre() != null) {
             throw new IllegalStateException("Esta caja ya fue cerrada anteriormente.");
         }
 
-        // Matemáticas del corte
-        BigDecimal diferencia = montoDeclarado.subtract(montoEsperado);
+        // --- LÓGICA FINANCIERA BLINDADA (NUNCA CONFIAR EN EL FRONTEND) ---
+
+        // 1. Sumamos todo el EFECTIVO que ingresó en este turno
+        BigDecimal ventasEfectivo = ventaRepository.sumarVentasEfectivoPorTurno(corte.getUsuario().getId(), corte.getFechaApertura());
+        if (ventasEfectivo == null) ventasEfectivo = BigDecimal.ZERO;
+
+        // 2. Sumamos todo el EFECTIVO que salió por devoluciones en este turno
+        BigDecimal efectivoDevuelto = devolucionRepository.sumarEfectivoDevueltoPorTurno(corte.getUsuario().getId(), corte.getFechaApertura());
+        if (efectivoDevuelto == null) efectivoDevuelto = BigDecimal.ZERO;
+
+        // 3. Calculamos el Monto Esperado Real (Ingresos - Egresos)
+        BigDecimal montoEsperadoReal = ventasEfectivo.subtract(efectivoDevuelto);
+
+        // 4. Matemáticas del corte con el valor REAL, ignorando lo que haya mandado el frontend
+        BigDecimal diferencia = montoDeclarado.subtract(montoEsperadoReal);
 
         // Espía para descuadres (Alerta Roja)
         if (diferencia.compareTo(BigDecimal.ZERO) != 0) {
             auditoriaLogService.registrarEventoSilencioso("CIERRE_CAJA_DESCUADRE", "El cajero cerró con una diferencia de: $" + diferencia);
         }
 
-        corte.setMontoEsperado(montoEsperado);
+        corte.setMontoEsperado(montoEsperadoReal);
         corte.setMontoDeclarado(montoDeclarado);
         corte.setDiferencia(diferencia);
         corte.setFechaCierre(LocalDateTime.now());
@@ -77,9 +95,8 @@ public class CorteCajaService {
         CorteCaja corteGuardado = corteCajaRepository.save(corte);
 
         // --- ESPÍA SILENCIOSO: CIERRE DE CAJA EXITOSO ---
-        // Se registra SIEMPRE, garantizando la trazabilidad local aunque no haya internet.
         auditoriaLogService.registrarEventoSilencioso("CIERRE_CAJA",
-                "Cierre de turno completado. Monto declarado: $" + montoDeclarado + " | Monto esperado: $" + montoEsperado);
+                "Cierre de turno completado. Monto declarado: $" + montoDeclarado + " | Monto esperado: $" + montoEsperadoReal);
 
         // --- EL CEREBRO DE LAS NOTIFICACIONES ---
         String correosGuardados = configuracionService.obtenerCorreosReporte();
@@ -87,37 +104,25 @@ public class CorteCajaService {
         if (!correosGuardados.isEmpty()) {
             try {
                 String[] destinatarios = correosGuardados.split(",");
-
-                // TRUCO SENIOR: Forzamos la inicialización del nombre del usuario mientras la conexión
-                // a la base de datos sigue abierta, para evitar el LazyInitializationException en los correos.
                 corteGuardado.getUsuario().getUsername();
-
-                // 1. ENVÍO DIARIO (Se dispara SIEMPRE que se cierra una caja e incluye el Stock)
                 emailService.enviarReporteDiarioHtml(destinatarios, corteGuardado);
 
-                // 2. ENVÍO SEMANAL DINÁMICO
-                String diaConfigurado = configuracionService.obtenerDiaReporteSemanal(); // Ej. "FRIDAY"
+                String diaConfigurado = configuracionService.obtenerDiaReporteSemanal();
                 DayOfWeek diaActual = corteGuardado.getFechaCierre().getDayOfWeek();
 
-                // Si hoy es el día que el cliente eligió en la configuración...
                 if (diaActual.name().equalsIgnoreCase(diaConfigurado)) {
-
-                    // Calculamos desde hace 6 días a las 00:00:00 hasta este preciso momento
                     LocalDateTime finSemana = corteGuardado.getFechaCierre();
                     LocalDateTime inicioSemana = finSemana.minusDays(6).with(LocalTime.MIN);
-
-                    // Disparamos el reporte pesado
                     emailService.enviarReporteSemanalHtml(destinatarios, inicioSemana, finSemana);
                 }
             } catch (Exception e) {
-                // Si falla el internet, atrapamos el error para que la base de datos no haga un rollback
-                // y la caja sí se marque como cerrada en el sistema local.
                 System.err.println("La caja se cerró localmente, pero falló el envío de correos: " + e.getMessage());
             }
         }
 
         return corteGuardado;
     }
+
     // 3. Consultas para el Dashboard del Administrador
     public Optional<CorteCaja> obtenerCajaActiva(Usuario cajero) {
         return corteCajaRepository.findCajaAbiertaPorUsuario(cajero);

@@ -3,16 +3,17 @@
 <body>
 <header th:fragment="header" class="top-header">
     <div>
-        <h5 class="mb-0 fw-bold" style="color: var(--brand-stone);">Panel de Control</h5>
+        <h5 class="mb-0 fw-bold text-truncate" style="color: var(--brand-stone); max-width: 200px;">Panel de Control</h5>
     </div>
     <div class="d-flex align-items-center gap-3">
         <div class="text-end">
-            <div class="fw-bold" th:text="${usuarioLogueado?.username}">Usuario</div>
+            <!-- FIX SENIOR: text-truncate y max-width evitan que un nombre largo rompa la cabecera en 1024px -->
+            <div class="fw-bold text-truncate" style="max-width: 120px;" th:text="${usuarioLogueado?.username}" title="Usuario">Usuario</div>
             <div class="badge-rol text-uppercase" th:text="${usuarioLogueado?.rol}">ROL</div>
         </div>
 
         <form th:action="@{/logout}" method="post" class="m-0">
-            <button type="submit" class="btn btn-light text-danger border-0">
+            <button type="submit" class="btn btn-light text-danger border-0" title="Cerrar Sesión">
                 <i class="bi bi-box-arrow-right fs-5"></i>
             </button>
         </form>

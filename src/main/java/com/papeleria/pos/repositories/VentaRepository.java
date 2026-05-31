@@ -37,4 +37,7 @@ public interface VentaRepository extends JpaRepository<Venta, Integer> {
     // Usamos 'JOIN FETCH' para traer el usuario y no hacer múltiples consultas a la BD (Optimización N+1).
     @Query("SELECT v FROM Venta v JOIN FETCH v.usuario WHERE v.id = :idVenta")
     Optional<Venta> findVentaConUsuario(@Param("idVenta") Integer idVenta);
+    // Suma las ventas hechas exclusivamente en efectivo durante el turno
+    @Query("SELECT SUM(v.total) FROM Venta v WHERE v.usuario.id = :idUsuario AND v.metodoPago = 'EFECTIVO' AND v.fechaHora >= :fechaApertura AND v.estado != 'CANCELADA'")
+    BigDecimal sumarVentasEfectivoPorTurno(Integer idUsuario, LocalDateTime fechaApertura);
 }

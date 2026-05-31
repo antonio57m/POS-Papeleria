@@ -387,7 +387,6 @@
 
     function procesarAjuste() {
         const id = document.getElementById('ajusteId').value;
-        // tipo siempre será ABASTECER con esta actualización
         const cantidad = document.getElementById('ajusteCantidad').value;
 
         fetch(`/api/insumos/${id}/abastecer?cantidad=${cantidad}`, { method: 'PATCH' })

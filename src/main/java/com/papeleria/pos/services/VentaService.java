@@ -32,7 +32,6 @@ public class VentaService {
     @Autowired
     private InsumoService insumoService;
 
-    // INYECTAMOS EL SERVICIO PARA PODER VALIDAR SU ESTADO
     @Autowired
     private ServicioService servicioService;
 
@@ -66,7 +65,6 @@ public class VentaService {
     }
 
     // EL MOTOR PRINCIPAL DEL PUNTO DE VENTA
-// EL MOTOR PRINCIPAL DEL PUNTO DE VENTA
     @Transactional
     public Venta procesarVentaCompleta(Venta cabecera, List<DetalleVenta> detalles) {
 
@@ -125,42 +123,58 @@ public class VentaService {
 
         return ventaGuardada;
     }
-    // ... tu método procesarVentaCompleta está arriba ...
 
     // ==========================================
-    // NUEVO: MOTOR FINANCIERO DE UTILIDADES
+    // NUEVO: MOTOR FINANCIERO DE UTILIDADES BLINDADO
     // ==========================================
     public Map<String, BigDecimal> calcularTotalesYGanancias(List<Venta> ventas) {
         BigDecimal totalVendido = BigDecimal.ZERO;
         BigDecimal gananciaNeta = BigDecimal.ZERO;
 
         for (Venta v : ventas) {
-            // Ignoramos ventas fallidas o canceladas por seguridad
+            // Ignoramos ventas fallidas o canceladas por completo
             if (v.getEstado() != null && v.getEstado().name().equals("CANCELADA")) {
                 continue;
             }
 
-            totalVendido = totalVendido.add(v.getTotal() != null ? v.getTotal() : BigDecimal.ZERO);
+            // FIX SENIOR: Ya no sumamos v.getTotal() aquí, porque eso incluiría dinero devuelto.
+            // Analizamos línea por línea del ticket para calcular el dinero real que conservó el negocio.
 
             List<DetalleVenta> detalles = detalleVentaService.obtenerDetallesPorVenta(v);
             for (DetalleVenta d : detalles) {
-                if (d.getTipoItem() == TipoItem.PRODUCTO) {
-                    BigDecimal precioCompra = BigDecimal.ZERO;
 
-                    // Buscamos el costo original del producto en el catálogo
-                    Optional<Producto> optProd = productoService.buscarPorId(d.getIdItem());
-                    if (optProd.isPresent() && optProd.get().getPrecioCompra() != null) {
-                        precioCompra = optProd.get().getPrecioCompra();
+                // Protegemos contra nulos
+                BigDecimal cantOriginal = d.getCantidad() != null ? d.getCantidad() : BigDecimal.ZERO;
+                BigDecimal cantDevuelta = d.getCantidadDevuelta() != null ? d.getCantidadDevuelta() : BigDecimal.ZERO;
+
+                // MATEMÁTICA REAL: Comprados menos devueltos
+                BigDecimal cantidadReal = cantOriginal.subtract(cantDevuelta);
+
+                // Solo calculamos finanzas si el cliente realmente se llevó al menos 1 unidad
+                if (cantidadReal.compareTo(BigDecimal.ZERO) > 0) {
+
+                    // 1. Ingreso Bruto de esta fila específica
+                    BigDecimal ingresoBrutoFila = d.getPrecioUnitario().multiply(cantidadReal);
+                    totalVendido = totalVendido.add(ingresoBrutoFila);
+
+                    // 2. Ganancia (Utilidad Neta)
+                    if (d.getTipoItem() == TipoItem.PRODUCTO) {
+                        BigDecimal precioCompra = BigDecimal.ZERO;
+
+                        Optional<Producto> optProd = productoService.buscarPorId(d.getIdItem());
+                        if (optProd.isPresent() && optProd.get().getPrecioCompra() != null) {
+                            precioCompra = optProd.get().getPrecioCompra();
+                        }
+
+                        // Fórmula: (PrecioVenta - PrecioCompra) * CantidadReal
+                        BigDecimal gananciaUnitaria = d.getPrecioUnitario().subtract(precioCompra);
+                        BigDecimal gananciaFila = gananciaUnitaria.multiply(cantidadReal);
+                        gananciaNeta = gananciaNeta.add(gananciaFila);
+
+                    } else if (d.getTipoItem() == TipoItem.SERVICIO) {
+                        // Regla de Negocio: Los servicios representan 100% de ganancia neta en base al Ingreso Real
+                        gananciaNeta = gananciaNeta.add(ingresoBrutoFila);
                     }
-
-                    // Fórmula: Ganancia = (PrecioVenta - PrecioCompra) * Cantidad
-                    BigDecimal gananciaUnitaria = d.getPrecioUnitario().subtract(precioCompra);
-                    BigDecimal gananciaTotalItem = gananciaUnitaria.multiply(d.getCantidad());
-                    gananciaNeta = gananciaNeta.add(gananciaTotalItem);
-
-                } else if (d.getTipoItem() == TipoItem.SERVICIO) {
-                    // Regla de Negocio: Los servicios representan 100% de ganancia neta
-                    gananciaNeta = gananciaNeta.add(d.getSubtotal());
                 }
             }
         }
@@ -170,5 +184,4 @@ public class VentaService {
                 "gananciaNeta", gananciaNeta
         );
     }
-
 }
