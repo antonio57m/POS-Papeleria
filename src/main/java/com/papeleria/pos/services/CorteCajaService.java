@@ -34,11 +34,13 @@ public class CorteCajaService {
     @Autowired
     private DevolucionRepository devolucionRepository;
 
-    // INYECTAMOS EL REPOSITORIO DE VENTAS PARA HACER LA MATEMÁTICA INTERNA
     @Autowired
     private VentaRepository ventaRepository;
 
-    // 1. Apertura de Turno (Al iniciar el día o cambio de turno)
+    // FIX SENIOR: Constante inmutable del Fondo de Caja
+    private static final BigDecimal FONDO_FIJO_CAJA = new BigDecimal("450.00");
+
+    // 1. Apertura de Turno
     @Transactional
     public CorteCaja abrirCaja(Usuario cajero) {
         Optional<CorteCaja> cajaAbierta = corteCajaRepository.findCajaAbiertaPorUsuario(cajero);
@@ -76,8 +78,8 @@ public class CorteCajaService {
         BigDecimal efectivoDevuelto = devolucionRepository.sumarEfectivoDevueltoPorTurno(corte.getUsuario().getId(), corte.getFechaApertura());
         if (efectivoDevuelto == null) efectivoDevuelto = BigDecimal.ZERO;
 
-        // 3. Calculamos el Monto Esperado Real (Ingresos - Egresos)
-        BigDecimal montoEsperadoReal = ventasEfectivo.subtract(efectivoDevuelto);
+        // 3. Calculamos el Monto Esperado Real (FONDO FIJO + Ingresos - Egresos)
+        BigDecimal montoEsperadoReal = FONDO_FIJO_CAJA.add(ventasEfectivo).subtract(efectivoDevuelto);
 
         // 4. Matemáticas del corte con el valor REAL, ignorando lo que haya mandado el frontend
         BigDecimal diferencia = montoDeclarado.subtract(montoEsperadoReal);

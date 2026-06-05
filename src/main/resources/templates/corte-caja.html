@@ -88,7 +88,9 @@
                 <p class="text-muted small mb-4">Turno iniciado el: <span id="lblFechaApertura" class="fw-bold"></span></p>
 
                 <div class="mb-4">
-                    <label class="form-label text-muted fw-bold text-uppercase" style="letter-spacing: 0.1em; font-size: 0.8rem;">Efectivo Físico Contado</label>
+                    <label class="form-label text-muted fw-bold text-uppercase" style="letter-spacing: 0.1em; font-size: 0.8rem;">
+                        Efectivo Físico Contado <br><span class="text-primary text-capitalize" style="font-size: 0.7rem;"></span>
+                    </label>
                     <div class="input-group">
                         <span class="input-group-text bg-white border-0 fs-2 fw-bold text-muted">$</span>
                         <input type="number" step="0.50" id="inputMontoDeclarado" class="form-control input-blind-cut" placeholder="0.00">
@@ -111,12 +113,10 @@
 
     document.addEventListener('DOMContentLoaded', verificarEstadoCaja);
 
-    // 1. Consulta al backend si el usuario tiene una caja abierta
     function verificarEstadoCaja() {
         const panelAbrir = document.getElementById('panelAbrirCaja');
         const panelCerrar = document.getElementById('panelCerrarCaja');
 
-        // Resetea vistas
         panelAbrir.style.display = 'none';
         panelCerrar.style.display = 'none';
 
@@ -125,7 +125,6 @@
                 if (res.ok) {
                     return res.json();
                 } else if (res.status === 404) {
-                    // No hay caja activa
                     panelAbrir.style.display = 'block';
                     throw new Error('NoActiva');
                 } else {
@@ -134,7 +133,6 @@
             })
             .then(corte => {
                 turnoActivo = corte;
-                // Formateamos la fecha para la UI
                 const fechaDate = new Date(corte.fechaApertura);
                 document.getElementById('lblFechaApertura').innerText = fechaDate.toLocaleString('es-MX', { dateStyle: 'full', timeStyle: 'short' });
 
@@ -146,7 +144,6 @@
             });
     }
 
-    // 2. Proceso para Abrir Caja
     function abrirTurno() {
         fetch('/api/cortes-caja/abrir', {
             method: 'POST',
@@ -156,14 +153,13 @@
             .then(res => {
                 if(res.ok) {
                     alert("¡Turno abierto exitosamente! Ya puedes realizar ventas.");
-                    verificarEstadoCaja(); // Recarga la UI
+                    verificarEstadoCaja();
                 } else {
                     res.text().then(err => alert("Error: " + err));
                 }
             });
     }
 
-    // 3. Proceso para el Corte a Ciegas (La magia del Frontend)
     function confirmarCierre() {
         const montoDeclarado = parseFloat(document.getElementById('inputMontoDeclarado').value);
 
@@ -172,12 +168,11 @@
             return;
         }
 
-        if(!confirm('¿Estás totalmente seguro de la cantidad ingresada? Una vez cerrado el turno no podrás modificarlo ni realizar más ventas.')) {
+        // FIX SENIOR: Recordatorio explícito en el popup
+        if(!confirm('¿Estás totalmente seguro de la cantidad ingresada?. Una vez cerrado el turno no podrás modificarlo ni realizar más ventas.')) {
             return;
         }
 
-        // MAGIA INVISIBLE: Calculamos el "monto_esperado" consultando las ventas en efectivo del turno
-        // Formateamos las fechas a ISO string seguro truncando los milisegundos para Spring Boot
         const inicio = turnoActivo.fechaApertura;
         const fin = new Date().toISOString().substring(0, 19);
 
@@ -186,10 +181,12 @@
         fetch(urlVentasEfectivo)
             .then(res => res.json())
             .then(ventas => {
-                // Sumamos el total de todas las ventas en efectivo
-                const montoEsperado = ventas.reduce((sum, v) => sum + v.total, 0);
+                // FIX SENIOR: Agregamos el fondo fijo de caja
+                const FONDO_CAJA = 450.00;
+                const ventasEfectivo = ventas.reduce((sum, v) => sum + v.total, 0);
 
-                // Ahora sí, disparamos el cierre final al Backend
+                const montoEsperado = FONDO_CAJA + ventasEfectivo;
+
                 ejecutarCierreBackend(montoDeclarado, montoEsperado);
             })
             .catch(err => {
@@ -198,7 +195,6 @@
             });
     }
 
-    // 4. Disparo final al Controller
     function ejecutarCierreBackend(declarado, esperado) {
         const payload = {
             montoDeclarado: declarado,
@@ -215,10 +211,9 @@
                 throw new Error("Error al cerrar caja");
             })
             .then(corteCerrado => {
-                // El cajero no necesita saber la diferencia matemática, solo que terminó.
                 alert("Turno cerrado correctamente. El reporte de auditoría ha sido registrado exitosamente.");
                 turnoActivo = null;
-                verificarEstadoCaja(); // Regresa la UI al panel de "Abrir Caja"
+                verificarEstadoCaja();
             })
             .catch(err => alert(err.message));
     }
